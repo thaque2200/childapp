@@ -1,0 +1,77 @@
+deployment_guide
+deployment-backend
+deployment-frontend
+gpt-models.xlsx
+**/.venv/
+# Node dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment variables
+.env
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS/system files
+.DS_Store
+Thumbs.db
+
+# IDE/editor folders
+.vscode/
+.idea/
+
+# Optional: lock file if using yarn instead of npm
+# yarn.lock
+
+# Excel or other temp files
+gpt-models.xlsx
+
+
+# Python cache
+__pycache__/
+**/__pycache__/
+
+# Virtual environments
+.venv/
+**/.venv/
+
+# Jupyter notebooks (optional, depending on usage)
+*.ipynb
+
+# PyCharm/VSCode and system files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Environment/config files
+.env
+
+# Docker-related (if you generate any temporary build files)
+*.log
+
+# Excel or temp files (if created during testing)
+*.xlsx
+
+
+# Prevent including local model copies
+backend/app/models/e5small/
+backend/app/models/e5small/
+backend/app/models/
+*.pt
+*.bin
+*.xlsx
+
+# Explicitly ignore this folder (optional, since * already does)
+secret_files/
+
+
+# Explicitly ignore this folder (optional, since * already does)
+inactive_history_persistent/notebooks/
+inactive_history_persistent/models/
+peditrician/notebook/

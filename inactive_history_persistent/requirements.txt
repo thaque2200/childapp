@@ -1,0 +1,16 @@
+# Google Cloud dependencies
+google-cloud-secret-manager
+google-cloud-storage
+google-auth
+
+# Cloud SQL Postgres connection
+cloud-sql-python-connector[pg8000]
+psycopg2-binary
+
+# LLM support (Phi-3, Transformers)
+transformers==4.41.1
+torch==2.3.0
+accelerate
+
+# Utilities
+python-dateutil

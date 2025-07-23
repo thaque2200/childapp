@@ -1,0 +1,79 @@
+name: Deploy ETL Cloud Function and Scheduler
+
+on:
+  push:
+    paths:
+      - 'history_tracker/**'
+    branches:
+      - main
+
+jobs:
+  deploy-and-schedule:
+    name: Deploy Cloud Function for Tracking History + Scheduler
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: '${{ secrets.GCP_DEPLOY_KEY }}'
+
+      - name: Set up gcloud CLI
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+            version: '>= 456.0.0'
+            project_id: axial-trail-460618-u6
+ 
+      - name: Deploy Cloud Function (Gen 2 + VPC)
+        run: |
+            gcloud version
+            gcloud functions deploy run_etl_http_history \
+            --gen2 \
+            --runtime=python311 \
+            --entry-point=run_etl_http \
+            --trigger-http \
+            --ingress-settings=all \
+            --egress-settings=private-ranges-only \
+            --region=us-east1 \
+            --memory=512Mi \
+            --timeout=60s \
+            --source=history_tracker \
+            --service-account=cloud-function-deploy@axial-trail-460618-u6.iam.gserviceaccount.com \
+            --vpc-connector=serverless-connector \
+            --set-secrets="DB_CONFIG=babyapp_db_admin:latest" \
+            --allow-unauthenticated
+
+      - name: Create or Update Cloud Scheduler Job
+        run: |
+          REGION="us-east1"
+          PROJECT="axial-trail-460618-u6"
+          FUNCTION_URL="https://${REGION}-${PROJECT}.cloudfunctions.net/functions/run_etl_http_history"
+          SCHEDULER_SA="cloud-function-deploy@${PROJECT}.iam.gserviceaccount.com"
+
+          if gcloud scheduler jobs describe run-timeline-etl-daily-history --location=$REGION >/dev/null 2>&1; then
+            echo "Updating Cloud Scheduler job..."
+            gcloud scheduler jobs update http run-timeline-etl-daily-history \
+              --location=$REGION \
+              --schedule "0 3 * * *" \
+              --time-zone "America/Toronto" \
+              --http-method GET \
+              --uri "$FUNCTION_URL" \
+              --oidc-service-account-email=$SCHEDULER_SA
+          else
+            echo "Creating Cloud Scheduler job..."
+            gcloud scheduler jobs create http run-timeline-etl-daily-history \
+              --location=$REGION \
+              --schedule "0 3 * * *" \
+              --time-zone "America/Toronto" \
+              --http-method GET \
+              --uri "$FUNCTION_URL" \
+              --oidc-service-account-email=$SCHEDULER_SA
+          fi

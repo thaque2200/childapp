@@ -1,0 +1,66 @@
+name: Deploy Cloudsql Backend to Cloud Run
+
+on:
+  push:
+    paths:
+      - 'cloudsql_backend/**'
+    branches: [main]
+
+jobs:
+  deploy-backend-peditrician:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_DEPLOY_KEY }}
+
+      - name: Set up gcloud CLI
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: axial-trail-460618-u6
+
+      - name: Create Artifact Registry repo if it doesn't exist
+        run: |
+          if ! gcloud artifacts repositories describe cloudsql-backend \
+            --location=us-east1 \
+            --project=axial-trail-460618-u6 2>/dev/null; then
+            echo "Creating Artifact Registry repository: cloudsql-backend"
+            gcloud artifacts repositories create cloudsql-backend \
+              --repository-format=docker \
+              --location=us-east1 \
+              --description="cloudsql-backend backend repo"
+          else
+            echo "Repository cloudsql-backend already exists"
+          fi
+
+      - name: Build and push Docker image
+        run: |
+          cd cloudsql_backend
+          gcloud builds submit . \
+            --tag=us-east1-docker.pkg.dev/axial-trail-460618-u6/cloudsql-backend/cloudsql-backend \
+            --gcs-log-dir=gs://axial-trail-460618-u6_cloudbuild/build-logs/
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy cloudsql-backend-api \
+            --image=us-east1-docker.pkg.dev/axial-trail-460618-u6/cloudsql-backend/cloudsql-backend \
+            --region=us-east1 \
+            --platform=managed \
+            --allow-unauthenticated \
+            --port=8080 \
+            --cpu=1 \
+            --memory=1Gi \
+            --min-instances=0 \
+            --max-instances=5 \
+            --concurrency=80 \
+            --timeout=2400 \
+            --vpc-connector=serverless-connector \
+            --vpc-egress=private-ranges-only \
+            --ingress=all \
+            --update-secrets="DB_CONFIG=babyapp_db_admin:latest" \
+            --service-account=cloudsql-backend@axial-trail-460618-u6.iam.gserviceaccount.com

@@ -1,0 +1,6 @@
+# Prevent including local model copies
+app/models/e5small/
+app/models/
+*.pt
+*.bin
+*.xlsx

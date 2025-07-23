@@ -1,0 +1,64 @@
+name: Deploy Pediatrician Backend to Cloud Run
+
+on:
+  push:
+    paths:
+      - 'peditrician/**'
+    branches: [main]
+
+jobs:
+  deploy-backend-peditrician:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_DEPLOY_KEY }}
+
+      - name: Set up gcloud CLI
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: axial-trail-460618-u6
+
+      - name: Create Artifact Registry repo if it doesn't exist
+        run: |
+          if ! gcloud artifacts repositories describe peditrician \
+            --location=us-east1 \
+            --project=axial-trail-460618-u6 2>/dev/null; then
+            echo "Creating Artifact Registry repository: peditrician"
+            gcloud artifacts repositories create peditrician \
+              --repository-format=docker \
+              --location=us-east1 \
+              --description="Pediatrician backend repo"
+          else
+            echo "Repository peditrician already exists"
+          fi
+
+      - name: Build and push Docker image
+        run: |
+          cd peditrician
+          gcloud builds submit . \
+            --tag=us-east1-docker.pkg.dev/axial-trail-460618-u6/peditrician/peditrician \
+            --gcs-log-dir=gs://axial-trail-460618-u6_cloudbuild/build-logs/
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy peditrician-api \
+            --image=us-east1-docker.pkg.dev/axial-trail-460618-u6/peditrician/peditrician \
+            --region=us-east1 \
+            --platform=managed \
+            --allow-unauthenticated \
+            --port=8080 \
+            --cpu=1 \
+            --memory=1Gi \
+            --min-instances=0 \
+            --max-instances=5 \
+            --concurrency=80 \
+            --timeout=2400 \
+            --ingress=all \
+            --update-secrets="OPENAI_API_KEY=openapi_key:latest" \
+            --service-account=peditrician-backend@axial-trail-460618-u6.iam.gserviceaccount.com
