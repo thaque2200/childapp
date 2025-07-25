@@ -41,7 +41,7 @@ jobs:
             --entry-point=run_etl_http \
             --trigger-http \
             --ingress-settings=all \
-            --egress-settings=private-ranges-only \
+            --egress-settings=all \
             --region=us-east1 \
             --memory=512Mi \
             --timeout=60s \
