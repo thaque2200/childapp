@@ -34,5 +34,16 @@ def getconn() -> psycopg2.extensions.connection:
         enable_iam_auth=False,
         timeout=30
     )
+
+    # conn = connector.connect(
+    # instance_name,
+    # driver="pg8000",
+    # db=db_name,
+    # user=db_user,
+    # password=db_password,
+    # ip_type="PRIVATE",  # 👈 required for private IP
+    # enable_iam_auth=False  # Disable IAM auth
+    # )
+
     print("[DEBUG] Connection established")
     return conn
