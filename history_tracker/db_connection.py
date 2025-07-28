@@ -40,7 +40,7 @@ def getconn() -> pg8000.dbapi.Connection:
             password=db_password,
             ip_type="PRIVATE",
             enable_iam_auth=False,
-            timeout=60 # Keep this higher for initial debugging, then reduce if stable
+            timeout=30 # Keep this higher for initial debugging, then reduce if stable
         )
         print("[DEBUG] Connection established")
         return conn
