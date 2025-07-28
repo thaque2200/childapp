@@ -14,7 +14,7 @@ def getconn() -> psycopg2.extensions.connection:
 
     try:
         db_config = json.loads(db_config_str)
-        print(f"[DEBUG] Parsed DB_CONFIG with keys: {list(db_config.keys())}")
+        print(f"[DEBUG] Parsed DB_CONFIG with keys: {(db_config)}")
     except Exception as e:
         raise RuntimeError(f"Invalid DB_CONFIG format: {e}")
 
@@ -32,7 +32,7 @@ def getconn() -> psycopg2.extensions.connection:
         password=db_password,
         ip_type="PRIVATE",  # required
         enable_iam_auth=False,
-        timeout=30
+        timeout=300
     )
 
     # conn = connector.connect(
