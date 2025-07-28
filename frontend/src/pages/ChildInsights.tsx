@@ -1,17 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { auth } from "../firebase";
-import { useNavigate } from "react-router-dom";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer
-} from "recharts";
+import { format } from "date-fns";
 
 const API_URL_SQL = import.meta.env.VITE_API_URL_SQL;
 
@@ -22,6 +12,7 @@ interface TimelineEntry {
   age: string;
   severity: string;
   duration: string;
+  associated_symptoms?: string[];
 }
 
 const CACHE_KEY = "childTimelineCache";
@@ -29,46 +20,48 @@ const TIMESTAMP_KEY = "childTimelineCacheTimestamp";
 const INTENTS_KEY = "childTimelineIntentCache";
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
+// Generate consistent colors for different intents
+const getColorForIntent = (intent: string) => {
+  const colors = [
+    "#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6",
+    "#14b8a6", "#e11d48", "#f97316", "#6366f1"
+  ];
+  let hash = 0;
+  for (let i = 0; i < intent.length; i++) {
+    hash = intent.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash % colors.length);
+  return colors[index];
+};
+
 const ChildDevelopmentInsights: React.FC = () => {
-  const navigate = useNavigate();
   const [data, setData] = useState<TimelineEntry[]>([]);
   const [selectedIntent, setSelectedIntent] = useState<string | null>(null);
   const [availableIntents, setAvailableIntents] = useState<string[]>([]);
   const [authChecked, setAuthChecked] = useState(false);
-  const [authorized, setAuthorized] = useState(false);
 
-  // ✅ Handle auth state + initial fetch
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
-      if (!user) {
-        navigate("/"); // redirect to login
-      } else {
-        setAuthorized(true);
-        user.getIdToken(true).then((idToken) => {
-          fetchTimelineData(idToken);
-        });
-      }
+      if (!user) return;
       setAuthChecked(true);
+      user.getIdToken(true).then((idToken) => {
+        fetchTimelineData(idToken);
+      });
     });
-
     return () => unsubscribe();
-  }, [navigate]);
+  }, []);
 
-  // ✅ Re-fetch when intent changes (if already authorized)
   useEffect(() => {
-    if (!authorized) return;
-
+    if (!authChecked) return;
     const fetch = async () => {
       const user = auth.currentUser;
       if (!user) return;
       const token = await user.getIdToken(true);
       fetchTimelineData(token);
     };
-
     fetch();
-  }, [selectedIntent, authorized]);
+  }, [selectedIntent]);
 
-  // ✅ Core data + cache logic
   const fetchTimelineData = async (idToken: string) => {
     try {
       let parsed: TimelineEntry[] | null = null;
@@ -78,13 +71,12 @@ const ChildDevelopmentInsights: React.FC = () => {
       const intentsCache = localStorage.getItem(INTENTS_KEY);
       const now = Date.now();
 
-      const isStale =
-        !cached || !timestamp || now - parseInt(timestamp) > ONE_DAY_MS;
+      const isStale = !cached || !timestamp || now - parseInt(timestamp) > ONE_DAY_MS;
 
       if (isStale || selectedIntent) {
         const res = await axios.get(`${API_URL_SQL}/child-timeline`, {
           headers: { Authorization: `Bearer ${idToken}` },
-          params: { intent: selectedIntent || undefined }
+          params: { intent: selectedIntent || undefined },
         });
 
         parsed = res.data;
@@ -95,9 +87,7 @@ const ChildDevelopmentInsights: React.FC = () => {
 
           const foundIntents = Array.from(
             new Set(
-              parsed
-                .map((entry: TimelineEntry) => entry.intent)
-                .filter((val) => typeof val === "string" && val.length > 0)
+              parsed.map((entry: TimelineEntry) => entry.intent).filter(Boolean)
             )
           );
           setAvailableIntents(foundIntents);
@@ -119,29 +109,15 @@ const ChildDevelopmentInsights: React.FC = () => {
     }
   };
 
-  if (!authChecked) {
-    return <div className="text-center mt-20 text-gray-600">Checking authorization...</div>;
-  }
-
   return (
     <div className="p-4">
-      {/* Top Bar with Logout */}
-      <div className="flex justify-end mb-4">
-        <button
-          onClick={() => {
-            auth.signOut();
-            navigate("/");
-          }}
-          className="text-sm text-red-600 font-medium hover:underline"
-        >
-          Logout
-        </button>
-      </div>
-
       <h2 className="text-xl font-semibold mb-4">Symptom Timeline</h2>
 
       <div className="mb-4">
-        <label htmlFor="intentFilter" className="block text-sm font-medium text-gray-700 mb-1">
+        <label
+          htmlFor="intentFilter"
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
           Filter by Intent:
         </label>
         <select
@@ -159,28 +135,44 @@ const ChildDevelopmentInsights: React.FC = () => {
         </select>
       </div>
 
-      <button
-        className="text-sm text-blue-600 underline mb-4"
-        onClick={() => {
-          localStorage.removeItem(CACHE_KEY);
-          localStorage.removeItem(TIMESTAMP_KEY);
-          localStorage.removeItem(INTENTS_KEY);
-          setSelectedIntent(null); // re-trigger
-        }}
-      >
-        Refresh timeline data
-      </button>
+      <div className="overflow-x-auto border-t border-gray-300 py-8">
+        <div className="flex flex-row gap-10 px-2">
+          {data.map((entry, index) => (
+            <div
+              key={index}
+              className="flex flex-col items-center min-w-[120px] relative group"
+            >
+              {/* Colored dot */}
+              <div
+                className="w-4 h-4 rounded-full z-10"
+                style={{ backgroundColor: getColorForIntent(entry.intent) }}
+              />
 
-      <ResponsiveContainer width="100%" height={400}>
-        <LineChart data={data} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-          <CartesianGrid stroke="#ccc" strokeDasharray="5 5" />
-          <XAxis dataKey="timestamp" />
-          <YAxis />
-          <Tooltip />
-          <Legend />
-          <Line type="monotone" dataKey="symptom" stroke="#8884d8" />
-        </LineChart>
-      </ResponsiveContainer>
+              {/* Timestamp */}
+              <div className="text-sm text-gray-600 mt-2">
+                {format(new Date(entry.timestamp), "dd MMM yyyy")}
+              </div>
+
+              {/* Symptom label */}
+              <div className="text-xs mt-1 font-medium text-center">
+                {entry.symptom}
+              </div>
+
+              {/* Hover tooltip for associated symptoms */}
+              {entry.associated_symptoms?.length > 0 && (
+                <div className="absolute bottom-12 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition bg-white border shadow-lg p-2 text-xs rounded max-w-xs z-20 whitespace-normal">
+                  <strong>Associated Symptoms:</strong>
+                  <ul className="list-disc list-inside mt-1">
+                    {entry.associated_symptoms.map((s, idx) => (
+                      <li key={idx}>{s}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 };
