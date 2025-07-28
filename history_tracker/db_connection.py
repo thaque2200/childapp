@@ -10,7 +10,7 @@ def getconn() -> psycopg2.extensions.connection:
     # Lazy-initialize the Connector instance only when getconn is first called
     if connector is None:
         print("[DEBUG] Initializing Cloud SQL Connector (lazy init of instance)")
-        connector = Connector(refresh_strategy="lazy")
+        connector = Connector()
 
     print("[DEBUG] Reading DB_CONFIG from env")
     db_config_str = os.environ.get("DB_CONFIG")
