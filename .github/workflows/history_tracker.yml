@@ -48,6 +48,7 @@ jobs:
             --vpc-connector=projects/axial-trail-460618-u6/locations/us-east1/connectors/serverless-connector \
             --egress-settings=all \
             --set-secrets="DB_CONFIG=babyapp_db_admin:latest" \
+            --timeout=300s \
             --allow-unauthenticated
 
       - name: Create or Update Cloud Scheduler Job
