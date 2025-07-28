@@ -66,9 +66,9 @@ def run_daily_timeline_etl():
             assoc = symptom_data.get("associated_symptoms")
 
             if isinstance(assoc, list):
-                associated_symptoms = ", ".join(assoc) if assoc else None
+                associated_symptoms = assoc if assoc else None
             elif assoc:
-                associated_symptoms = str(assoc)
+                associated_symptoms = [str(assoc)]
             else:
                 associated_symptoms = None
 
