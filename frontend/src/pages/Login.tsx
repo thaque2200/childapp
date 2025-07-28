@@ -8,13 +8,6 @@ import {
 } from "firebase/auth";
 
   export default function Login() {
-  // // ✅ Add this debug log right here
-  // console.log("Firebase config from import.meta.env:", {
-  //   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  //   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  //   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  // });
-
   const navigate = useNavigate();
   const [isCreating, setIsCreating] = useState(false);
   const [email, setEmail] = useState("");
@@ -69,9 +62,6 @@ import {
               <a href="https://www.who.int" target="_blank" rel="noreferrer" className="text-blue-700 hover:underline">WHO</a>,{" "}
               <a href="https://medlineplus.gov" target="_blank" rel="noreferrer" className="text-blue-700 hover:underline">MedlinePlus</a>, and the{" "}
               <a href="https://www.jpeds.com/" target="_blank" rel="noreferrer" className="text-blue-700 hover:underline">Journal of Pediatrics</a>.
-            </li>
-            <li>
-              💬 <strong>Free tier:</strong> Ask up to 5 questions per day — totally free.
             </li>
           </ul>
         </div>

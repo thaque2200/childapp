@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routes.save_chat import router as save_chat_router
 from app.routes.chat_history import router as chat_history
-
+from app.routes.child_insights import router as child_insights
 
 app = FastAPI()
 
@@ -15,7 +15,8 @@ app.add_middleware(
 )
  
 app.include_router(save_chat_router)  
-app.include_router(chat_history)  
+app.include_router(chat_history) 
+app.include_router(child_insights) 
 
 
 @app.get("/")

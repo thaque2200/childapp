@@ -13,6 +13,7 @@ import {
   HelpCircle
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import ChildDevelopmentInsights from "./ChildInsights";
 
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -603,12 +604,9 @@ export default function Chat({ onLogout }: { onLogout: () => void }) {
         )}
 
         {activeTab === "Child Development Insights" && (
-          <div>
-            <h2 className="text-2xl font-bold mb-4 text-center">Child Development Insights</h2>
-            <p className="text-gray-600 text-center">Coming soon: professional-grade insights tailored from child profiles, behavioral patterns, and milestones.</p>
-          </div>
+          <ChildDevelopmentInsights />
         )}
-
+        
         {activeTab === "Parental Well-being & Coaching" && (
           <div>
             <h2 className="text-2xl font-bold mb-4 text-center">Parental Well-being & Coaching</h2>
