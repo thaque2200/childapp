@@ -37,79 +37,87 @@ const ChildDevelopmentInsights: React.FC = () => {
   const [authChecked, setAuthChecked] = useState(false);
   const [authorized, setAuthorized] = useState(false);
 
-  // ✅ Auth redirect logic
+  // ✅ Handle auth state + initial fetch
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (!user) {
         navigate("/"); // redirect to login
       } else {
         setAuthorized(true);
+        user.getIdToken(true).then((idToken) => {
+          fetchTimelineData(idToken);
+        });
       }
       setAuthChecked(true);
     });
+
     return () => unsubscribe();
   }, [navigate]);
 
-  // ✅ Main data fetch and caching
+  // ✅ Re-fetch when intent changes (if already authorized)
   useEffect(() => {
     if (!authorized) return;
 
-    const fetchTimelineData = async () => {
-      try {
-        let parsed: TimelineEntry[] | null = null;
-
-        const cached = localStorage.getItem(CACHE_KEY);
-        const timestamp = localStorage.getItem(TIMESTAMP_KEY);
-        const intentsCache = localStorage.getItem(INTENTS_KEY);
-        const now = Date.now();
-
-        const isStale =
-          !cached || !timestamp || now - parseInt(timestamp) > ONE_DAY_MS;
-
-        if (isStale || selectedIntent) {
-          const user = auth.currentUser;
-          if (!user) return;
-          const idToken = await user.getIdToken();
-
-          const res = await axios.get(`${API_URL_SQL}/child-timeline`, {
-            headers: { Authorization: `Bearer ${idToken}` },
-            params: { intent: selectedIntent || undefined }
-          });
-
-          parsed = res.data;
-
-          if (!selectedIntent) {
-            localStorage.setItem(CACHE_KEY, JSON.stringify(parsed));
-            localStorage.setItem(TIMESTAMP_KEY, now.toString());
-
-            const foundIntents = Array.from(
-              new Set(
-                parsed
-                  .map((entry: TimelineEntry) => entry.intent)
-                  .filter((val) => typeof val === "string" && val.length > 0)
-              )
-            );
-            setAvailableIntents(foundIntents);
-            localStorage.setItem(INTENTS_KEY, JSON.stringify(foundIntents));
-          }
-        } else {
-          parsed = JSON.parse(cached);
-          const intentList = intentsCache ? JSON.parse(intentsCache) : [];
-          setAvailableIntents(intentList);
-        }
-
-        setData(
-          selectedIntent
-            ? parsed.filter((entry) => entry.intent === selectedIntent)
-            : parsed
-        );
-      } catch (error) {
-        console.error("Failed to fetch timeline data:", error);
-      }
+    const fetch = async () => {
+      const user = auth.currentUser;
+      if (!user) return;
+      const token = await user.getIdToken(true);
+      fetchTimelineData(token);
     };
 
-    fetchTimelineData();
+    fetch();
   }, [selectedIntent, authorized]);
+
+  // ✅ Core data + cache logic
+  const fetchTimelineData = async (idToken: string) => {
+    try {
+      let parsed: TimelineEntry[] | null = null;
+
+      const cached = localStorage.getItem(CACHE_KEY);
+      const timestamp = localStorage.getItem(TIMESTAMP_KEY);
+      const intentsCache = localStorage.getItem(INTENTS_KEY);
+      const now = Date.now();
+
+      const isStale =
+        !cached || !timestamp || now - parseInt(timestamp) > ONE_DAY_MS;
+
+      if (isStale || selectedIntent) {
+        const res = await axios.get(`${API_URL_SQL}/child-timeline`, {
+          headers: { Authorization: `Bearer ${idToken}` },
+          params: { intent: selectedIntent || undefined }
+        });
+
+        parsed = res.data;
+
+        if (!selectedIntent) {
+          localStorage.setItem(CACHE_KEY, JSON.stringify(parsed));
+          localStorage.setItem(TIMESTAMP_KEY, now.toString());
+
+          const foundIntents = Array.from(
+            new Set(
+              parsed
+                .map((entry: TimelineEntry) => entry.intent)
+                .filter((val) => typeof val === "string" && val.length > 0)
+            )
+          );
+          setAvailableIntents(foundIntents);
+          localStorage.setItem(INTENTS_KEY, JSON.stringify(foundIntents));
+        }
+      } else {
+        parsed = JSON.parse(cached);
+        const intentList = intentsCache ? JSON.parse(intentsCache) : [];
+        setAvailableIntents(intentList);
+      }
+
+      setData(
+        selectedIntent
+          ? parsed.filter((entry) => entry.intent === selectedIntent)
+          : parsed
+      );
+    } catch (error) {
+      console.error("Failed to fetch timeline data:", error);
+    }
+  };
 
   if (!authChecked) {
     return <div className="text-center mt-20 text-gray-600">Checking authorization...</div>;
