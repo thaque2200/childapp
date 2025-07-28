@@ -136,46 +136,50 @@ const ChildDevelopmentInsights: React.FC = () => {
       </div>
 
 
-      <div className="relative border-t border-orange-500 min-h-[300px] py-32 overflow-x-auto overflow-y-visible">
-      <div className="flex flex-row gap-10 px-2 justify-start">
+    <div className="relative h-[300px] overflow-x-auto overflow-y-visible">
+      {/* Central horizontal timeline line */}
+      <div className="absolute top-1/2 w-full h-0.5 bg-orange-500" />
+
+      {/* Timeline items */}
+      <div className="flex flex-row gap-10 px-2 justify-start h-full items-center">
         {data.map((entry, index) => {
           const isAbove = index % 2 === 0;
           return (
             <div
               key={index}
-              className="flex flex-col items-center min-w-[120px] relative group"
+              className="relative flex flex-col items-center min-w-[120px] h-full group"
             >
               {isAbove && (
                 <>
-                  {/* Symptom above line */}
+                  {/* Symptom label */}
                   <div className="text-xs font-medium text-center mb-2 max-w-[100px]">
                     {entry.symptom}
                   </div>
 
                   {/* Vertical line upward from center */}
-                  <div className="absolute h-24 w-0.5 bg-orange-600 bottom-1/2 translate-y-1/2" />
+                  <div className="absolute bottom-1/2 translate-y-1/2 w-0.5 h-20 bg-orange-600" />
                 </>
               )}
 
-              {/* Dot on the center line */}
+              {/* Dot exactly on the central line */}
               <div
-                className="w-3 h-3 rounded-full z-10 bg-orange-600"
+                className="w-3 h-3 rounded-full bg-orange-600 z-10"
                 style={{ backgroundColor: getColorForIntent(entry.intent) }}
               />
 
               {!isAbove && (
                 <>
                   {/* Vertical line downward from center */}
-                  <div className="absolute h-24 w-0.5 bg-orange-600 top-1/2 -translate-y-1/2" />
+                  <div className="absolute top-1/2 -translate-y-1/2 w-0.5 h-20 bg-orange-600" />
 
-                  {/* Symptom below the line */}
+                  {/* Symptom label below */}
                   <div className="text-xs font-medium text-center mt-2 max-w-[100px]">
                     {entry.symptom}
                   </div>
                 </>
               )}
 
-              {/* Timestamp always at the bottom */}
+              {/* Timestamp always below everything */}
               <div className="text-sm text-gray-600 mt-2">
                 {format(new Date(entry.timestamp), "dd MMM yyyy")}
               </div>
@@ -196,6 +200,7 @@ const ChildDevelopmentInsights: React.FC = () => {
         })}
       </div>
     </div>
+
 
 
 
