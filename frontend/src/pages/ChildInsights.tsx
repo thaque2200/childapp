@@ -135,63 +135,70 @@ const ChildDevelopmentInsights: React.FC = () => {
         </select>
       </div>
 
-      <div className="overflow-x-auto border-t border-gray-300 py-8">
-        <div className="flex flex-row gap-10 px-2">
-          {data.map((entry, index) => {
-            const isAbove = index % 2 === 0; // Alternate up/down
-            return (
-              <div
-                key={index}
-                className="flex flex-col items-center min-w-[120px] relative group"
-              >
-                {/* Symptom label (above or below) */}
-                {isAbove && (
-                  <>
-                    <div className="text-xs mb-2 font-medium text-center max-w-[100px]">
-                      {entry.symptom}
-                    </div>
-                    <div className="w-0.5 h-12 bg-orange-600" />
-                  </>
-                )}
 
-                {/* Dot (always on timeline) */}
-                <div
-                  className="w-3 h-3 rounded-full z-10"
-                  style={{ backgroundColor: getColorForIntent(entry.intent) }}
-                />
-
-                {/* Line + Symptom label below (if not above) */}
-                {!isAbove && (
-                  <>
-                    <div className="w-0.5 h-12 bg-orange-600" />
-                    <div className="text-xs mt-2 font-medium text-center max-w-[100px]">
-                      {entry.symptom}
-                    </div>
-                  </>
-                )}
-
-                {/* Timestamp always at bottom */}
-                <div className="text-sm text-gray-600 mt-2">
-                  {format(new Date(entry.timestamp), "dd MMM yyyy")}
-                </div>
-
-                {/* Tooltip for associated symptoms */}
-                {entry.associated_symptoms?.length > 0 && (
-                  <div className={`absolute ${isAbove ? "top-[-90px]" : "bottom-[-90px]"} left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition bg-white border shadow-lg p-2 text-xs rounded max-w-xs z-20 whitespace-normal`}>
-                    <strong>Associated Symptoms:</strong>
-                    <ul className="list-disc list-inside mt-1">
-                      {entry.associated_symptoms.map((s, idx) => (
-                        <li key={idx}>{s}</li>
-                      ))}
-                    </ul>
+      <div className="relative border-t border-orange-500 py-12">
+      <div className="flex flex-row gap-10 px-2 justify-start">
+        {data.map((entry, index) => {
+          const isAbove = index % 2 === 0;
+          return (
+            <div
+              key={index}
+              className="flex flex-col items-center min-w-[120px] relative group"
+            >
+              {isAbove && (
+                <>
+                  {/* Symptom above line */}
+                  <div className="text-xs font-medium text-center mb-2 max-w-[100px]">
+                    {entry.symptom}
                   </div>
-                )}
-              </div>
-            );
-          })}
 
-        </div>
+                  {/* Vertical line upward from center */}
+                  <div className="absolute h-10 w-0.5 bg-orange-600 bottom-1/2 translate-y-1/2" />
+                </>
+              )}
+
+              {/* Dot on the center line */}
+              <div
+                className="w-3 h-3 rounded-full z-10 bg-orange-600"
+                style={{ backgroundColor: getColorForIntent(entry.intent) }}
+              />
+
+              {!isAbove && (
+                <>
+                  {/* Vertical line downward from center */}
+                  <div className="absolute h-10 w-0.5 bg-orange-600 top-1/2 -translate-y-1/2" />
+
+                  {/* Symptom below the line */}
+                  <div className="text-xs font-medium text-center mt-2 max-w-[100px]">
+                    {entry.symptom}
+                  </div>
+                </>
+              )}
+
+              {/* Timestamp always at the bottom */}
+              <div className="text-sm text-gray-600 mt-2">
+                {format(new Date(entry.timestamp), "dd MMM yyyy")}
+              </div>
+
+              {/* Tooltip if associated symptoms exist */}
+              {entry.associated_symptoms?.length > 0 && (
+                <div className={`absolute ${isAbove ? "top-[-100px]" : "bottom-[-100px]"} left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition bg-white border shadow-lg p-2 text-xs rounded max-w-xs z-20 whitespace-normal`}>
+                  <strong>Associated Symptoms:</strong>
+                  <ul className="list-disc list-inside mt-1">
+                    {entry.associated_symptoms.map((s, idx) => (
+                      <li key={idx}>{s}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
+    </div>
+
+
+
     </div>
   );
 };
