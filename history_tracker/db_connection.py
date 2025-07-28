@@ -1,16 +1,18 @@
 import os
+# import psycopg2
+import pg8000.dbapi # <--- CHANGE 1: Import pg8000 instead of psycopg2
 from google.cloud.sql.connector import Connector
 import json
 
 # Declare connector globally, but don't initialize it yet
 connector = None
 
-def getconn() -> psycopg2.extensions.connection:
+def getconn() -> pg8000.dbapi.Connection:
     global connector
     # Lazy-initialize the Connector instance only when getconn is first called
     if connector is None:
         print("[DEBUG] Initializing Cloud SQL Connector (lazy init of instance)")
-        connector = Connector()
+        connector = Connector(refresh_strategy="lazy")
 
     print("[DEBUG] Reading DB_CONFIG from env")
     db_config_str = os.environ.get("DB_CONFIG")
