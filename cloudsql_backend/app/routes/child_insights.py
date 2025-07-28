@@ -21,7 +21,7 @@ def get_timeline_data(user = Depends(verify_firebase_token)):
             AND uid = %s
             ORDER BY timestamp
         """
-        cur.execute(query, (uid))
+        cur.execute(query, (uid,))
         rows = cur.fetchall()
         return [
             {
