@@ -136,7 +136,7 @@ const ChildDevelopmentInsights: React.FC = () => {
       </div>
 
 
-      <div className="relative border-t border-orange-500 py-12">
+      <div className="relative border-t border-orange-500 min-h-[300px] py-32 overflow-x-auto overflow-y-visible">
       <div className="flex flex-row gap-10 px-2 justify-start">
         {data.map((entry, index) => {
           const isAbove = index % 2 === 0;
@@ -153,7 +153,7 @@ const ChildDevelopmentInsights: React.FC = () => {
                   </div>
 
                   {/* Vertical line upward from center */}
-                  <div className="absolute h-10 w-0.5 bg-orange-600 bottom-1/2 translate-y-1/2" />
+                  <div className="absolute h-24 w-0.5 bg-orange-600 bottom-1/2 translate-y-1/2" />
                 </>
               )}
 
@@ -166,7 +166,7 @@ const ChildDevelopmentInsights: React.FC = () => {
               {!isAbove && (
                 <>
                   {/* Vertical line downward from center */}
-                  <div className="absolute h-10 w-0.5 bg-orange-600 top-1/2 -translate-y-1/2" />
+                  <div className="absolute h-24 w-0.5 bg-orange-600 top-1/2 -translate-y-1/2" />
 
                   {/* Symptom below the line */}
                   <div className="text-xs font-medium text-center mt-2 max-w-[100px]">
