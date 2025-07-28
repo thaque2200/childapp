@@ -137,54 +137,53 @@ const ChildDevelopmentInsights: React.FC = () => {
 
 
     <div className="relative h-[300px] overflow-x-auto overflow-y-visible">
-      {/* Central horizontal timeline line */}
-      <div className="absolute top-1/2 w-full h-0.5 bg-orange-500" />
+      {/* Central horizontal line */}
+      <div className="absolute top-1/2 left-0 w-full h-0.5 bg-orange-500 z-0" />
 
-      {/* Timeline items */}
-      <div className="flex flex-row gap-10 px-2 justify-start h-full items-center">
-        {data.map((entry, index) => {
+      {/* Events */}
+      <div className="flex flex-row gap-10 px-4 justify-start h-full items-center relative z-10">
+        {[...data].reverse().map((entry, index) => {
           const isAbove = index % 2 === 0;
           return (
             <div
               key={index}
               className="relative flex flex-col items-center min-w-[120px] h-full group"
             >
+              {/* Symptom label (above the dot) */}
               {isAbove && (
-                <>
-                  {/* Symptom label */}
-                  <div className="text-xs font-medium text-center mb-2 max-w-[100px]">
-                    {entry.symptom}
-                  </div>
-
-                  {/* Vertical line upward from center */}
-                  <div className="absolute bottom-1/2 translate-y-1/2 w-0.5 h-20 bg-orange-600" />
-                </>
+                <div className="mb-2 text-xs font-medium text-center max-w-[100px]">
+                  {entry.symptom}
+                </div>
               )}
 
-              {/* Dot exactly on the central line */}
+              {/* Vertical line (from timeline up or down) */}
+              <div
+                className={`absolute w-0.5 bg-orange-600 ${
+                  isAbove
+                    ? "bottom-1/2 translate-y-1/2 h-16"
+                    : "top-1/2 -translate-y-1/2 h-16"
+                }`}
+              />
+
+              {/* Dot on the timeline */}
               <div
                 className="w-3 h-3 rounded-full bg-orange-600 z-10"
                 style={{ backgroundColor: getColorForIntent(entry.intent) }}
               />
 
+              {/* Symptom label (below the dot) */}
               {!isAbove && (
-                <>
-                  {/* Vertical line downward from center */}
-                  <div className="absolute top-1/2 -translate-y-1/2 w-0.5 h-20 bg-orange-600" />
-
-                  {/* Symptom label below */}
-                  <div className="text-xs font-medium text-center mt-2 max-w-[100px]">
-                    {entry.symptom}
-                  </div>
-                </>
+                <div className="mt-2 text-xs font-medium text-center max-w-[100px]">
+                  {entry.symptom}
+                </div>
               )}
 
-              {/* Timestamp always below everything */}
-              <div className="text-sm text-gray-600 mt-2">
+              {/* Timestamp */}
+              <div className="text-sm text-gray-600 mt-1">
                 {format(new Date(entry.timestamp), "dd MMM yyyy")}
               </div>
 
-              {/* Tooltip if associated symptoms exist */}
+              {/* Tooltip for associated symptoms */}
               {entry.associated_symptoms?.length > 0 && (
                 <div className={`absolute ${isAbove ? "top-[-100px]" : "bottom-[-100px]"} left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition bg-white border shadow-lg p-2 text-xs rounded max-w-xs z-20 whitespace-normal`}>
                   <strong>Associated Symptoms:</strong>
@@ -200,6 +199,7 @@ const ChildDevelopmentInsights: React.FC = () => {
         })}
       </div>
     </div>
+
 
 
 
