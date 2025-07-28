@@ -1,5 +1,4 @@
 import os
-import psycopg2
 from google.cloud.sql.connector import Connector
 import json
 
