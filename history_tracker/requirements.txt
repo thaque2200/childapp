@@ -1,5 +1,4 @@
 google-cloud-secret-manager
-psycopg2-binary
 google-auth
 google-cloud-storage
-cloud-sql-python-connector
+cloud-sql-python-connector[pg8000]

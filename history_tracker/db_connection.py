@@ -33,7 +33,7 @@ def getconn() -> psycopg2.extensions.connection:
     try:
         conn = connector.connect(
             instance_name,
-            driver="psycopg2",
+            driver="pg8000",
             db=db_name,
             user=db_user,
             password=db_password,
