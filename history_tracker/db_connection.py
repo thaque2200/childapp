@@ -4,7 +4,7 @@ from google.cloud.sql.connector import Connector
 import json
 
 # Create connector instance
-connector = Connector()
+connector = Connector(refresh_strategy="lazy")
 
 def getconn() -> psycopg2.extensions.connection:
     print("[DEBUG] Reading DB_CONFIG from env")

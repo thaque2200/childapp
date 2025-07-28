@@ -42,13 +42,12 @@ jobs:
             --trigger-http \
             --region=us-east1 \
             --memory=512Mi \
-            --timeout=60s \
             --source=history_tracker \
             --service-account=cloud-function-deploy@axial-trail-460618-u6.iam.gserviceaccount.com \
             --vpc-connector=projects/axial-trail-460618-u6/locations/us-east1/connectors/serverless-connector \
             --egress-settings=all \
             --set-secrets="DB_CONFIG=babyapp_db_admin:latest" \
-            --timeout=300s \
+            --timeout=3000s \
             --allow-unauthenticated
 
       - name: Create or Update Cloud Scheduler Job
