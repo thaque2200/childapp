@@ -536,19 +536,24 @@ export default function Chat({ onLogout }: { onLogout: () => void }) {
             )}
           </div>
 
-            {parsedSymptom && (
-                <div className="mt-4 p-4 border border-blue-200 rounded bg-blue-50 shadow-sm text-sm text-blue-800">
-                  <h4 className="font-semibold text-blue-700 mb-2">Symptom Summary So Far:</h4>
-                  <ul className="list-disc pl-4">
-                    {Object.entries(parsedSymptom).map(([key, value]) => (
-                      <li key={key}>
-                        <strong>{key.replaceAll("_", " ")}:</strong>{" "}
-                        {Array.isArray(value) ? value.join(", ") : value || <span className="text-gray-400">N/A</span>}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+            {parsedSymptom && Object.keys(parsedSymptom).length > 0 ? (
+              <div className="mt-4 p-4 border border-blue-200 rounded bg-blue-50 shadow-sm text-sm text-blue-800">
+                <h4 className="font-semibold text-blue-700 mb-2">Symptom Summary So Far:</h4>
+                <ul className="list-disc pl-4">
+                  {Object.entries(parsedSymptom).map(([key, value]) => (
+                    <li key={key}>
+                      <strong>{key.replaceAll("_", " ")}:</strong>{" "}
+                      {Array.isArray(value) ? value.join(", ") : value || <span className="text-gray-400">N/A</span>}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : followUpMode ? (
+              <div className="mt-4 p-4 border border-yellow-200 rounded bg-yellow-50 shadow-sm text-sm text-yellow-800">
+                <h4 className="font-semibold text-yellow-700 mb-1">Let's start with your main health concern.</h4>
+                <p>Please tell me what primary symptom or issue your child is experiencing.</p>
+              </div>
+            ) : null}
 
 
             {followUpMode && missingFields.length > 0 && (
@@ -606,7 +611,7 @@ export default function Chat({ onLogout }: { onLogout: () => void }) {
         {activeTab === "Child Development Insights" && (
           <ChildDevelopmentInsights />
         )}
-        
+
         {activeTab === "Parental Well-being & Coaching" && (
           <div>
             <h2 className="text-2xl font-bold mb-4 text-center">Parental Well-being & Coaching</h2>
