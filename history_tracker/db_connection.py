@@ -49,14 +49,3 @@ def getconn() -> psycopg2.extensions.connection:
     except Exception as e:
         print(f"[ERROR] Unexpected error during connection: {e}")
         raise
-
-# Your Cloud Function entry point
-def run_etl_http(request):
-    try:
-        conn = getconn()
-        # ... your ETL logic here ...
-        conn.close()
-        return "ETL process completed successfully!", 200
-    except Exception as e:
-        print(f"Error during ETL process: {e}")
-        return f"Error: {e}", 500
