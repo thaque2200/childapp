@@ -21,7 +21,7 @@ def getconn() -> pg8000.dbapi.Connection:
 
     try:
         db_config = json.loads(db_config_str)
-        print(f"[DEBUG] Parsed DB_CONFIG with keys: {list(db_config.keys())}")
+        # print(f"[DEBUG] Parsed DB_CONFIG with keys: {list(db_config.keys())}")
     except Exception as e:
         raise RuntimeError(f"Invalid DB_CONFIG format: {e}")
 
