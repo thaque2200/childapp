@@ -154,8 +154,8 @@ const ChildDevelopmentInsights: React.FC = () => {
         <div className="text-center text-gray-400 mt-6">No symptoms found.</div>
       ) : (
 
-        <div className="bg-white rounded-lg shadow border p-6 max-w-7xl mx-auto overflow-x-auto">
-          <div className="relative h-[320px] timeline-container">
+        <div className="relative w-full overflow-x-auto overflow-y-visible py-6 bg-white border rounded shadow">
+          <div className="timeline-container relative min-h-[400px] w-full overflow-visible">
             {/* Central horizontal line */}
             <div className="absolute top-1/2 left-0 w-full h-0.5 bg-gray-300 z-0" />
 
