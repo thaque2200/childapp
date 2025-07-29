@@ -48,7 +48,8 @@ async def is_primary_symptom_valid(symptom: str) -> bool:
 The term "{symptom}" was extracted as a primary symptom.
 
 Is this a valid, specific pediatric symptom (like "fever", "rash", "vomiting")?
-Reply with "yes" or "no". Avoid vague terms like "not well", "feeling off", etc.
+Vague terms like "not well", "feeling off", etc., are not valid primary symptom.
+Reply with "yes" or "no". 
 """
     response = await client.chat.completions.create(
         model="gpt-3.5-turbo-0125",
@@ -68,7 +69,7 @@ You are a pediatric triage assistant.
 The primary symptom is: "{primary_symptom}".
 
 In addition to these always-required clinically important fields:
-["primary_symptom", "duration", "age", "severity", "associated_symptoms"]
+["primary_symptom", "duration", "age", "associated_symptoms"]
 
 Return a JSON array of at most **3 additional** clinically relevant and important fields to collect for this symptom.
 
