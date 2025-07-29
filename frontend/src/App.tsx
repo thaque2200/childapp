@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import Chat from "./pages/Chat";
 import Login from "./pages/Login";
 import ChildDevelopmentInsights from "./pages/ChildInsights";
-import MilestoneInferenceEngine from "./pages/Milestone"; // 👈 add this
+import MilestoneInferenceEngine from "./pages/Milestones"; // 👈 add this
 import ParentsWellbeing from "./pages/Parents"; // 👈
 import { auth } from "./firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
