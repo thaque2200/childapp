@@ -20,7 +20,6 @@ const TIMESTAMP_KEY = "childTimelineCacheTimestamp";
 const INTENTS_KEY = "childTimelineIntentCache";
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
-// Generate consistent colors for different intents
 const getColorForIntent = (intent: string) => {
   const colors = [
     "#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6",
@@ -70,7 +69,7 @@ const ChildDevelopmentInsights: React.FC = () => {
 
   const fetchTimelineData = async (idToken: string) => {
     try {
-      setLoading(true); // add this
+      setLoading(true);
       let parsed: TimelineEntry[] = [];
       const cached = localStorage.getItem(CACHE_KEY);
       const timestamp = localStorage.getItem(TIMESTAMP_KEY);
@@ -108,7 +107,7 @@ const ChildDevelopmentInsights: React.FC = () => {
         }
         const intentList = intentsCache ? JSON.parse(intentsCache) : [];
         setAvailableIntents(intentList);
-        setLoading(false); // ✅ ensure this is set here too
+        setLoading(false);
       }
 
       setData(
@@ -116,10 +115,10 @@ const ChildDevelopmentInsights: React.FC = () => {
           ? parsed.filter((entry) => entry.intent === selectedIntent)
           : parsed
       );
-      setLoading(false);  // ✅ ensure it's always reset
+      setLoading(false);
     } catch (error) {
       console.error("Failed to fetch timeline data:", error);
-      setLoading(false); // ensure UI doesn't hang
+      setLoading(false);
     }
   };
 
@@ -150,57 +149,43 @@ const ChildDevelopmentInsights: React.FC = () => {
       </div>
 
       {loading ? (
-          <div className="text-center text-gray-500 mt-6">Loading timeline...</div>
-        ) : data.length === 0 ? (
-          <div className="text-center text-gray-400 mt-6">No symptoms found.</div>
-        ) : (
-          
-          
-          <div className="relative h-[320px] overflow-x-auto overflow-y-visible timeline-container">
+        <div className="text-center text-gray-500 mt-6">Loading timeline...</div>
+      ) : data.length === 0 ? (
+        <div className="text-center text-gray-400 mt-6">No symptoms found.</div>
+      ) : (
+        <div className="relative h-[320px] overflow-x-auto overflow-y-visible timeline-container">
           <div className="absolute top-1/2 left-0 w-full h-0.5 bg-gray-400 z-0" />
 
           <div className="flex flex-row gap-10 px-6 justify-start items-center relative z-10">
             {[...data].reverse().map((entry, index) => {
               const isAbove = index % 2 === 0;
               const color = getColorForIntent(entry.intent);
+              const key = `${entry.timestamp}-${entry.symptom}-${index}`;
               return (
                 <div
-                  key={index}
+                  key={key}
                   className="relative flex flex-col items-center min-w-[140px] sm:min-w-[160px] h-full group"
                 >
-                  {/* Label Box */}
-                  {isAbove && (
-                    <div className="mb-2 text-center bg-white border rounded shadow px-3 py-1 text-xs w-[140px]">
-                      <div className="font-semibold text-gray-700">{format(new Date(entry.timestamp), "dd MMM yyyy")}</div>
-                      <div className="text-gray-600">{entry.symptom}</div>
-                    </div>
+                  {isAbove ? (
+                    <>
+                      <div className="mb-2 text-center bg-white border rounded shadow px-3 py-1 text-xs w-[140px]">
+                        <div className="font-semibold text-gray-700">{format(new Date(entry.timestamp), "dd MMM yyyy")}</div>
+                        <div className="text-gray-600">{entry.symptom}</div>
+                      </div>
+                      <div className="h-16 w-0.5" style={{ backgroundColor: color }} />
+                      <div className="w-3 h-3 rounded-full border border-white shadow z-10" style={{ backgroundColor: color }} />
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-3 h-3 rounded-full border border-white shadow z-10" style={{ backgroundColor: color }} />
+                      <div className="h-16 w-0.5" style={{ backgroundColor: color }} />
+                      <div className="mt-2 text-center bg-white border rounded shadow px-3 py-1 text-xs w-[140px]">
+                        <div className="font-semibold text-gray-700">{format(new Date(entry.timestamp), "dd MMM yyyy")}</div>
+                        <div className="text-gray-600">{entry.symptom}</div>
+                      </div>
+                    </>
                   )}
 
-                  {/* Vertical stem */}
-                  <div
-                    className={`absolute w-0.5 ${
-                      isAbove
-                        ? "bottom-1/2 translate-y-1/2 h-16"
-                        : "top-1/2 -translate-y-1/2 h-16"
-                    }`}
-                    style={{ backgroundColor: color }}
-                  />
-
-                  {/* Dot */}
-                  <div
-                    className="w-3 h-3 rounded-full border border-white shadow z-10"
-                    style={{ backgroundColor: color }}
-                  />
-
-                  {/* Label Box (bottom) */}
-                  {!isAbove && (
-                    <div className="mt-2 text-center bg-white border rounded shadow px-3 py-1 text-xs w-[140px]">
-                      <div className="font-semibold text-gray-700">{format(new Date(entry.timestamp), "dd MMM yyyy")}</div>
-                      <div className="text-gray-600">{entry.symptom}</div>
-                    </div>
-                  )}
-
-                  {/* Tooltip on hover */}
                   {entry.associated_symptoms?.length > 0 && (
                     <div
                       className={`absolute z-20 bg-white border shadow-md p-2 text-xs rounded w-48 ${
@@ -220,12 +205,9 @@ const ChildDevelopmentInsights: React.FC = () => {
             })}
           </div>
         </div>
-
-
       )}
     </div>
   );
-
 };
 
 export default ChildDevelopmentInsights;
