@@ -13,7 +13,10 @@ import {
   HelpCircle
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import ChildDevelopmentInsights from "./ChildInsights";
+import { useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
+import { format } from "date-fns";
+
 
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -22,10 +25,10 @@ const API_URL_SQL = import.meta.env.VITE_API_URL_SQL;
 
 
 const TABS = [
-  "Smart Parent Assistant",
-  "Child Development Insights",
-  "Parental Well-being & Coaching",
-  "Milestone Inference Engine (MIE)"
+  { label: "Smart Parent Assistant", path: "/chat" },
+  { label: "Child Development Insights", path: "/childinsights" },
+  { label: "Parental Well-being & Coaching", path: "/parents" }, // Placeholder
+  { label: "Milestone Inference Engine (MIE)", path: "/milestones" }, // Placeholder
 ];
 
 const INTENT_TO_PERSONA: Record<string, string> = {
@@ -52,14 +55,16 @@ const PERSONA_ICONS: Record<string, JSX.Element> = {
 
 export default function Chat({ onLogout }: { onLogout: () => void }) {
   const [input, setInput] = useState("");
-  // const [response, setResponse] = useState("");
-  const [history, setHistory] = useState([]);
-  const [activeTab, setActiveTab] = useState("Smart Parent Assistant");
-
+  interface ChatEntry {
+    question: string;
+    response: string;
+    timestamp: string;
+  }
+  const [history, setHistory] = useState<ChatEntry[]>([]);
+  const navigate = useNavigate();
+  const location = useLocation(); // ← Missing!
   const [loadingHistory, setLoadingHistory] = useState(true);
-
   const [loadingResponse, setLoadingResponse] = useState(false);
-
   const [activePersona, setActivePersona] = useState(() => {
     return localStorage.getItem("activePersona") || "Persona Inactive";
   });
@@ -88,9 +93,6 @@ export default function Chat({ onLogout }: { onLogout: () => void }) {
     sessionStorage.removeItem("requiredFields");
     sessionStorage.removeItem("followups");
     sessionStorage.removeItem("primarySymptomAvailable");
-
-    // setActivePersona("Persona Inactive");
-    // localStorage.removeItem("activePersona");
   };
 
 
@@ -125,13 +127,6 @@ export default function Chat({ onLogout }: { onLogout: () => void }) {
     const stored = sessionStorage.getItem("requiredFields");
     if (stored) setRequiredFields(JSON.parse(stored));
   }, []);
-
-  useEffect(() => {
-    if (activeTab !== "Smart Parent Assistant" && !followUpMode) {
-      resetFollowUp();  // ✅ Only reset if NOT in follow-up mode
-    }
-  }, [activeTab, followUpMode]);
-  
 
   // Restore parsedSymptom from session
   useEffect(() => {
@@ -449,13 +444,15 @@ export default function Chat({ onLogout }: { onLogout: () => void }) {
           <div className="flex flex-wrap gap-6">
             {TABS.map((tab) => (
               <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
+                key={tab.path}
+                onClick={() => navigate(tab.path)}
                 className={`pb-2 text-sm font-medium border-b-2 transition-colors duration-200 ease-in-out ${
-                  activeTab === tab ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-blue-500"
+                  location.pathname === tab.path
+                    ? "border-blue-600 text-blue-600"
+                    : "border-transparent text-gray-500 hover:text-blue-500"
                 }`}
               >
-                {tab}
+                {tab.label}
               </button>
             ))}
           </div>
@@ -487,23 +484,23 @@ export default function Chat({ onLogout }: { onLogout: () => void }) {
 
       {/* Content */}
       <div className="p-6 max-w-4xl mx-auto">
-        {activeTab === "Smart Parent Assistant" && (
-          <div>
-            <h2 className="text-2xl font-bold mb-4 text-center">Smart Parent Assistant</h2>
+          <h2 className="text-2xl font-bold mb-4 text-center">Smart Parent Assistant</h2>
 
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activePersona}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.3 }}
-                className="text-center text-sm text-blue-600 mb-2 flex justify-center items-center gap-2"
-              >
-                {PERSONA_ICONS[activePersona] || <HelpCircle className="w-4 h-4 text-gray-400" />}
-                <span>Persona Activated: <strong>{activePersona}</strong></span>
-              </motion.div>
-            </AnimatePresence>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activePersona}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.3 }}
+              className="text-center text-sm text-blue-600 mb-2 flex justify-center items-center gap-2"
+            >
+              {PERSONA_ICONS[activePersona] || <HelpCircle className="w-4 h-4 text-gray-400" />}
+              <span>
+                Persona Activated: <strong>{activePersona}</strong>
+              </span>
+            </motion.div>
+          </AnimatePresence>
 
           <div className="flex flex-col sm:flex-row sm:items-center gap-2">
             <input
@@ -589,7 +586,7 @@ export default function Chat({ onLogout }: { onLogout: () => void }) {
                     <div key={idx} className="mb-4 p-3 border rounded bg-white shadow-sm">
                       <p><strong>Q:</strong> {entry.question}</p>
                       <p><strong>A:</strong> {entry.response}</p>
-                      <p className="text-sm text-gray-400">{new Date(entry.timestamp).toLocaleString()}</p>
+                      <p className="text-sm text-gray-400">{format(new Date(entry.timestamp), "PPpp")}</p>
                     </div>
                   ))}
                 </div>
@@ -602,37 +599,7 @@ export default function Chat({ onLogout }: { onLogout: () => void }) {
                 Pediatrician session complete ✔️ You can ask a new question anytime.
               </div>
             )}
-
-
-
           </div>
-        )}
-
-        {activeTab === "Child Development Insights" && (
-          <ChildDevelopmentInsights />
-        )}
-
-        {activeTab === "Parental Well-being & Coaching" && (
-          <div>
-            <h2 className="text-2xl font-bold mb-4 text-center">Parental Well-being & Coaching</h2>
-            <p className="text-gray-600 text-center">Personalized guidance on emotional support, parental stress, and bonding — from trusted sources and AI personas.</p>
-          </div>
-        )}
-
-        {activeTab === "Milestone Inference Engine (MIE)" && (
-          <div>
-            <h2 className="text-2xl font-bold mb-4 text-center">Milestone Inference Engine (MIE)</h2>
-            <ul className="list-disc ml-5 text-gray-700">
-              <li>No checklists — milestones inferred from your conversation</li>
-              <li>Identifies growth areas for both parent and child using contextual cues</li>
-              <li>Backed by sources such as AAP, CDC, WHO, MedlinePlus, and Pediatrics Journal</li>
-              <li>Knowledge derived from professional literature and best practices</li>
-            </ul>
-          </div>
-        )}
       </div>
-    </div>
   );
-
-
 }

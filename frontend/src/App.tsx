@@ -2,8 +2,13 @@ import React, { useEffect, useState, useRef } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import Chat from "./pages/Chat";
 import Login from "./pages/Login";
+import ChildDevelopmentInsights from "./pages/ChildInsights";
+import MilestoneInferenceEngine from "./pages/Milestone"; // 👈 add this
+import ParentsWellbeing from "./pages/Parents"; // 👈
 import { auth } from "./firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
+import Layout from "./components/Layout"; // 👈
+
 
 const timeoutDuration = Number(import.meta.env.VITE_INACTIVITY_TIMEOUT_MS) || 300000;
 const warningLeadTime = 10000;
@@ -29,7 +34,10 @@ export default function App() {
   const resetTimers = () => {
     if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
     if (warningTimerRef.current) clearTimeout(warningTimerRef.current);
-    warningTimerRef.current = setTimeout(() => alert("You will be logged out in 10 seconds due to inactivity."), timeoutDuration - warningLeadTime);
+    warningTimerRef.current = setTimeout(
+      () => alert("You will be logged out in 10 seconds due to inactivity."),
+      timeoutDuration - warningLeadTime
+    );
     logoutTimerRef.current = setTimeout(() => logout("inactivity"), timeoutDuration);
   };
 
@@ -58,7 +66,25 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/login" element={isLoggedIn ? <Navigate to="/chat" /> : <Login />} />
-        <Route path="/chat" element={isLoggedIn ? <Chat onLogout={() => logout("manual")} /> : <Navigate to="/login" />} />
+
+        {/* Protected Routes */}
+        <Route path="/chat" element={
+          isLoggedIn ? <Layout onLogout={() => logout("manual")}><Chat /></Layout> : <Navigate to="/login" />
+        } />
+
+        <Route path="/child-insights" element={
+          isLoggedIn ? <Layout onLogout={() => logout("manual")}><ChildDevelopmentInsights /></Layout> : <Navigate to="/login" />
+        } />
+
+        <Route path="/milestone-inference" element={
+          isLoggedIn ? <Layout onLogout={() => logout("manual")}><MilestoneInferenceEngine /></Layout> : <Navigate to="/login" />
+        } />
+
+        <Route path="/parents" element={
+          isLoggedIn ? <Layout onLogout={() => logout("manual")}><ParentsWellbeing /></Layout> : <Navigate to="/login" />
+        } />
+
+
         {/* fallback */}
         <Route path="*" element={<Navigate to={isLoggedIn ? "/chat" : "/login"} />} />
       </Routes>
