@@ -179,9 +179,9 @@ const ChildDevelopmentInsights: React.FC = () => {
 
                     {/* Top label + stem */}
                     {isAbove && (
-                      <div className="absolute top-[calc(50%+10px)] flex flex-col items-center">
-                        <div className="h-8 w-0.5" style={{ backgroundColor: color }} />
-                        <div className="mt-1 text-center bg-white border rounded shadow px-3 py-1 text-xs w-[140px]">
+                      <div className="absolute top-[calc(50%-100px)] flex flex-col items-center">
+                        <div className="h-10 w-0.5" style={{ backgroundColor: color }} />
+                        <div className="mb-1 text-center bg-white border rounded shadow px-3 py-1 text-xs w-[140px]">
                           <div className="font-semibold text-sm text-gray-800">{entry.symptom}</div>
                           <div className="text-xs text-gray-500">{format(new Date(entry.timestamp), "dd MMM yyyy")}</div>
                         </div>
@@ -190,9 +190,9 @@ const ChildDevelopmentInsights: React.FC = () => {
 
                     {/* Bottom label + stem */}
                     {!isAbove && (
-                      <div className="absolute top-[calc(50%+8px)] flex flex-col items-center">
-                        <div className="w-0.5 h-12" style={{ backgroundColor: color }} />
-                        <div className="mt-2 text-center bg-white border rounded shadow px-3 py-1 text-xs w-[140px]">
+                      <div className="absolute top-[calc(50%+10px)] flex flex-col items-center">
+                        <div className="h-10 w-0.5" style={{ backgroundColor: color }} />
+                        <div className="mt-1 text-center bg-white border rounded shadow px-3 py-1 text-xs w-[140px]">
                           <div className="font-semibold text-sm text-gray-800">{entry.symptom}</div>
                           <div className="text-xs text-gray-500">{format(new Date(entry.timestamp), "dd MMM yyyy")}</div>
                         </div>
