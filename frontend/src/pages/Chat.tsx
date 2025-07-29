@@ -86,30 +86,30 @@ export default function Chat() {
 
 
   // Clean everything on hard refresh
-  useEffect(() => {
-    console.log("Page load → clearing session & persona");
+  // useEffect(() => {
+  //   console.log("Page load → clearing session & persona");
 
-    // Clear all session storage keys
-    sessionStorage.removeItem("followUpMode");
-    sessionStorage.removeItem("followUpSymptom");
-    sessionStorage.removeItem("followUpBuffer");
-    sessionStorage.removeItem("requiredFields");
-    sessionStorage.removeItem("followups");
-    sessionStorage.removeItem("primarySymptomAvailable");
+  //   // Clear all session storage keys
+  //   sessionStorage.removeItem("followUpMode");
+  //   sessionStorage.removeItem("followUpSymptom");
+  //   sessionStorage.removeItem("followUpBuffer");
+  //   sessionStorage.removeItem("requiredFields");
+  //   sessionStorage.removeItem("followups");
+  //   sessionStorage.removeItem("primarySymptomAvailable");
 
-    // Optionally also clear persona on full page reload
-    localStorage.removeItem("activePersona");
+  //   // Optionally also clear persona on full page reload
+  //   localStorage.removeItem("activePersona");
 
-    // Optional: reset any frontend state too
-    setFollowUpMode(false);
-    setParsedSymptom(null);
-    setFollowUpBuffer([]);
-    setRequiredFields([]);
-    setFollowups({});
-    setPrimarySymptomAvailable(false);
-    setActivePersona("Persona Inactive");
+  //   // Optional: reset any frontend state too
+  //   setFollowUpMode(false);
+  //   setParsedSymptom(null);
+  //   setFollowUpBuffer([]);
+  //   setRequiredFields([]);
+  //   setFollowups({});
+  //   setPrimarySymptomAvailable(false);
+  //   setActivePersona("Persona Inactive");
 
-  }, []);  // 👈 run only on first page load
+  // }, []);  // 👈 run only on first page load
 
 
   useEffect(() => {
@@ -548,7 +548,6 @@ export default function Chat() {
                 </div>
               )
             )}
-
 
             {showSessionCompleteToast && (
               <div className="mt-3 px-4 py-2 text-sm rounded bg-green-100 text-green-800 border border-green-300 shadow-sm text-center">
