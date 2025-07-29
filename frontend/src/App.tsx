@@ -84,7 +84,7 @@ export default function App() {
         } />
 
         {/* Fallback */}
-        <Route path="*" element={<Navigate to={isLoggedIn ? "/chat" : "/login"} />} />
+        <Route path="*" element={<Navigate to={isLoggedIn ? "/smart-parent-chat" : "/login"} />} />
       </Routes>
     </Router>
   );
