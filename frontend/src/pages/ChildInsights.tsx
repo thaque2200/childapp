@@ -154,63 +154,61 @@ const ChildDevelopmentInsights: React.FC = () => {
         ) : data.length === 0 ? (
           <div className="text-center text-gray-400 mt-6">No symptoms found.</div>
         ) : (
-          <div className="relative h-[300px] overflow-x-auto overflow-y-visible timeline-container">
-            {/* Central horizontal line */}
-          <div className="absolute top-1/2 left-0 w-full h-0.5 bg-orange-500 z-0" />
+          
+          
+          <div className="relative h-[320px] overflow-x-auto overflow-y-visible timeline-container">
+          <div className="absolute top-1/2 left-0 w-full h-0.5 bg-gray-400 z-0" />
 
-          {/* Events */}
-          <div className="flex flex-row gap-10 px-4 justify-start h-full items-center relative z-10">
+          <div className="flex flex-row gap-10 px-6 justify-start items-center relative z-10">
             {[...data].reverse().map((entry, index) => {
               const isAbove = index % 2 === 0;
+              const color = getColorForIntent(entry.intent);
               return (
                 <div
                   key={index}
                   className="relative flex flex-col items-center min-w-[140px] sm:min-w-[160px] h-full group"
                 >
-                  {/* Symptom label (above the dot) */}
+                  {/* Label Box */}
                   {isAbove && (
-                    <div className="mb-2 text-xs font-medium text-center max-w-[100px]">
-                      {entry.symptom}
+                    <div className="mb-2 text-center bg-white border rounded shadow px-3 py-1 text-xs w-[140px]">
+                      <div className="font-semibold text-gray-700">{format(new Date(entry.timestamp), "dd MMM yyyy")}</div>
+                      <div className="text-gray-600">{entry.symptom}</div>
                     </div>
                   )}
 
-                  {/* Vertical line (from timeline up or down) */}
+                  {/* Vertical stem */}
                   <div
                     className={`absolute w-0.5 ${
                       isAbove
                         ? "bottom-1/2 translate-y-1/2 h-16"
                         : "top-1/2 -translate-y-1/2 h-16"
                     }`}
-                    style={{ backgroundColor: getColorForIntent(entry.intent) }}
+                    style={{ backgroundColor: color }}
                   />
 
                   {/* Dot */}
                   <div
-                    className="w-3 h-3 rounded-full z-10"
-                    style={{ backgroundColor: getColorForIntent(entry.intent) }}
+                    className="w-3 h-3 rounded-full border border-white shadow z-10"
+                    style={{ backgroundColor: color }}
                   />
 
-                  {/* Symptom label (below the dot) */}
+                  {/* Label Box (bottom) */}
                   {!isAbove && (
-                    <div className="mt-2 text-xs font-medium text-center max-w-[100px]">
-                      {entry.symptom}
+                    <div className="mt-2 text-center bg-white border rounded shadow px-3 py-1 text-xs w-[140px]">
+                      <div className="font-semibold text-gray-700">{format(new Date(entry.timestamp), "dd MMM yyyy")}</div>
+                      <div className="text-gray-600">{entry.symptom}</div>
                     </div>
                   )}
 
-                  {/* Timestamp */}
-                  <div className="text-sm text-gray-600 mt-1">
-                    {format(new Date(entry.timestamp), "dd MMM yyyy")}
-                  </div>
-
-                  {/* Tooltip */}
+                  {/* Tooltip on hover */}
                   {entry.associated_symptoms?.length > 0 && (
                     <div
-                      className={`absolute ${
-                        isAbove ? "top-[-100px]" : "bottom-[-100px]"
-                      } left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition bg-white border shadow-lg p-2 text-xs rounded max-w-xs z-20 whitespace-normal`}
+                      className={`absolute z-20 bg-white border shadow-md p-2 text-xs rounded w-48 ${
+                        isAbove ? "top-[-120px]" : "bottom-[-120px]"
+                      } left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition`}
                     >
-                      <strong>Associated Symptoms:</strong>
-                      <ul className="list-disc list-inside mt-1">
+                      <strong className="block text-gray-800 mb-1">Associated Symptoms:</strong>
+                      <ul className="list-disc list-inside text-gray-600">
                         {entry.associated_symptoms.map((s, idx) => (
                           <li key={idx}>{s}</li>
                         ))}
@@ -222,6 +220,8 @@ const ChildDevelopmentInsights: React.FC = () => {
             })}
           </div>
         </div>
+
+
       )}
     </div>
   );
