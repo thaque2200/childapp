@@ -156,26 +156,36 @@ const ChildDevelopmentInsights: React.FC = () => {
 
       <div className="flex justify-center w-full">
         <div className="w-full max-w-7xl overflow-x-auto rounded-lg border border-gray-200 shadow bg-white p-4">
-          <div className="timeline-container relative min-h-[420px] w-full overflow-visible">
+
+          {/* Timeline Container */}
+          <div className="timeline-container relative min-h-[420px] w-screen px-4 overflow-visible">
+
+            
+            
             {/* Central horizontal line */}
             <div className="absolute inset-x-0 top-1/2 h-0.5 bg-gray-400 z-0" />
 
-            <div className="relative z-10 flex flex-row gap-10 px-6 min-w-fit items-center">
+            <div className="relative z-10 flex flex-row flex-wrap justify-between items-center w-full">
               {[...data].reverse().map((entry, index) => {
                 const isAbove = index % 2 === 0;
                 const color = getColorForIntent(entry.intent);
                 const key = `${entry.timestamp}-${entry.symptom}-${index}`;
                 return (
-                  <div key={key} className="relative flex flex-col items-center min-w-[140px] sm:min-w-[160px] h-full group">
+                  <div key={key} className="relative flex flex-col items-center flex-1 min-w-[160px] max-w-[200px] group">
+                  {/* Each Vertical Line */}
+                    
+                    
                     {/* Dot anchored to exact center line */}
                     <div
                       className="absolute z-10 w-3 h-3 rounded-full border border-white shadow"
                       style={{
-                        top: "0%",
+                        top: "100%",
                         transform: "translateY(-50%)",
                         backgroundColor: color,
                       }}
                     />
+
+
 
                     {isAbove && (
                       <div className="absolute top-[calc(50%-30px)] flex flex-col items-center">
