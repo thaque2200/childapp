@@ -3,12 +3,11 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import Chat from "./pages/Chat";
 import Login from "./pages/Login";
 import ChildDevelopmentInsights from "./pages/ChildInsights";
-import MilestoneInferenceEngine from "./pages/milestones"; // 👈 add this
-import ParentsWellbeing from "./pages/parents"; // 👈
+import MilestoneInferenceEngine from "./pages/milestones";
+import ParentsWellbeing from "./pages/parents";
 import { auth } from "./firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
-import Layout from "./components/layout"; // 👈
-
+import Layout from "./components/layout";
 
 const timeoutDuration = Number(import.meta.env.VITE_INACTIVITY_TIMEOUT_MS) || 300000;
 const warningLeadTime = 10000;
@@ -84,8 +83,7 @@ export default function App() {
           isLoggedIn ? <Layout onLogout={() => logout("manual")}><ParentsWellbeing /></Layout> : <Navigate to="/login" />
         } />
 
-
-        {/* fallback */}
+        {/* Fallback */}
         <Route path="*" element={<Navigate to={isLoggedIn ? "/chat" : "/login"} />} />
       </Routes>
     </Router>

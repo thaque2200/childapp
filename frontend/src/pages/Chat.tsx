@@ -13,8 +13,6 @@ import {
   HelpCircle
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useNavigate } from "react-router-dom";
-import { useLocation } from "react-router-dom";
 import { format } from "date-fns";
 
 
@@ -23,13 +21,6 @@ const API_URL = import.meta.env.VITE_API_URL;
 const API_URL_PEDITRICIAN = import.meta.env.VITE_API_URL_PEDITRICIAN;
 const API_URL_SQL = import.meta.env.VITE_API_URL_SQL;
 
-
-const TABS = [
-  { label: "Smart Parent Assistant", path: "/chat" },
-  { label: "Child Development Insights", path: "/childinsights" },
-  { label: "Parental Well-being & Coaching", path: "/parents" }, // Placeholder
-  { label: "Milestone Inference Engine (MIE)", path: "/milestones" }, // Placeholder
-];
 
 const INTENT_TO_PERSONA: Record<string, string> = {
   "Child Psychologist": "Child Psychologist",
@@ -53,7 +44,7 @@ const PERSONA_ICONS: Record<string, JSX.Element> = {
   "Persona Inactive": <HelpCircle className="w-4 h-4 inline-block mr-1 text-gray-400" />
 };
 
-export default function Chat({ onLogout }: { onLogout: () => void }) {
+export default function Chat() {
   const [input, setInput] = useState("");
   interface ChatEntry {
     question: string;
@@ -61,8 +52,6 @@ export default function Chat({ onLogout }: { onLogout: () => void }) {
     timestamp: string;
   }
   const [history, setHistory] = useState<ChatEntry[]>([]);
-  const navigate = useNavigate();
-  const location = useLocation(); // ← Missing!
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [loadingResponse, setLoadingResponse] = useState(false);
   const [activePersona, setActivePersona] = useState(() => {
@@ -428,42 +417,9 @@ export default function Chat({ onLogout }: { onLogout: () => void }) {
       setLoadingResponse(false);
     }
   };
-
-  const logout = async () => {
-    localStorage.removeItem("activePersona");
-    await signOut(auth);
-    onLogout();
-  };
-  
   
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#F2FAFD' }}>
-      {/* Tab Navigation */}
-      <div className="bg-white px-6 shadow-sm border-b w-full">
-        <div className="flex justify-between items-center max-w-screen-2xl mx-auto py-3">
-          <div className="flex flex-wrap gap-6">
-            {TABS.map((tab) => (
-              <button
-                key={tab.path}
-                onClick={() => navigate(tab.path)}
-                className={`pb-2 text-sm font-medium border-b-2 transition-colors duration-200 ease-in-out ${
-                  location.pathname === tab.path
-                    ? "border-blue-600 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-blue-500"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-          <button
-            onClick={logout}
-            className="text-sm text-red-600 font-medium hover:underline"
-          >
-            Logout
-          </button>
-        </div>
-      </div>
 
       {/* Banner Image */}
       <div className="w-full">
