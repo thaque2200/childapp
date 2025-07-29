@@ -4,7 +4,7 @@ import Chat from "./pages/Chat";
 import Login from "./pages/Login";
 import ChildDevelopmentInsights from "./pages/ChildInsights";
 import MilestoneInferenceEngine from "./pages/milestones";
-import ParentsWellbeing from "./pages/parents";
+import ParentsWellBeing from "./pages/parents";
 import { auth } from "./firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import Layout from "./components/layout";
@@ -67,7 +67,7 @@ export default function App() {
         <Route path="/login" element={isLoggedIn ? <Navigate to="/chat" /> : <Login />} />
 
         {/* Protected Routes */}
-        <Route path="/chat" element={
+        <Route path="/smart-parent-chat" element={
           isLoggedIn ? <Layout onLogout={() => logout("manual")}><Chat /></Layout> : <Navigate to="/login" />
         } />
 
@@ -79,8 +79,8 @@ export default function App() {
           isLoggedIn ? <Layout onLogout={() => logout("manual")}><MilestoneInferenceEngine /></Layout> : <Navigate to="/login" />
         } />
 
-        <Route path="/parents" element={
-          isLoggedIn ? <Layout onLogout={() => logout("manual")}><ParentsWellbeing /></Layout> : <Navigate to="/login" />
+        <Route path="/parents-insights" element={
+          isLoggedIn ? <Layout onLogout={() => logout("manual")}><ParentsWellBeing /></Layout> : <Navigate to="/login" />
         } />
 
         {/* Fallback */}

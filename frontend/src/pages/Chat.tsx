@@ -84,33 +84,17 @@ export default function Chat() {
     sessionStorage.removeItem("primarySymptomAvailable");
   };
 
+  useEffect(() => {
+    const stored = sessionStorage.getItem("missingFields");
+    if (stored) setMissingFields(JSON.parse(stored));
+  }, []);
 
-  // Clean everything on hard refresh
-  // useEffect(() => {
-  //   console.log("Page load → clearing session & persona");
-
-  //   // Clear all session storage keys
-  //   sessionStorage.removeItem("followUpMode");
-  //   sessionStorage.removeItem("followUpSymptom");
-  //   sessionStorage.removeItem("followUpBuffer");
-  //   sessionStorage.removeItem("requiredFields");
-  //   sessionStorage.removeItem("followups");
-  //   sessionStorage.removeItem("primarySymptomAvailable");
-
-  //   // Optionally also clear persona on full page reload
-  //   localStorage.removeItem("activePersona");
-
-  //   // Optional: reset any frontend state too
-  //   setFollowUpMode(false);
-  //   setParsedSymptom(null);
-  //   setFollowUpBuffer([]);
-  //   setRequiredFields([]);
-  //   setFollowups({});
-  //   setPrimarySymptomAvailable(false);
-  //   setActivePersona("Persona Inactive");
-
-  // }, []);  // 👈 run only on first page load
-
+  useEffect(() => {
+    if (missingFields.length > 0)
+      sessionStorage.setItem("missingFields", JSON.stringify(missingFields));
+    else
+      sessionStorage.removeItem("missingFields");
+  }, [missingFields]);
 
   useEffect(() => {
     const stored = sessionStorage.getItem("requiredFields");

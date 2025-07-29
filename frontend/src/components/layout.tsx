@@ -3,9 +3,10 @@ import React from "react";
 import { Link, useLocation } from "react-router-dom";
 
 const tabs = [
-  { name: "Chat", path: "/chat" },
-  { name: "Child Insights", path: "/child-insights" },
-  { name: "Milestone Engine", path: "/milestone-inference" },
+  { name: "Smart Parent Assistant", path: "/smart-parent-chat" },
+  { name: "Child Development Insights", path: "/child-insights" },
+  { name: "Parental Well-being & Coaching", path: "/parents-insights" },
+  { name: "Milestone Inference Engine", path: "/milestone-inference" },
 ];
 
 const Layout: React.FC<{ children: React.ReactNode; onLogout: () => void }> = ({ children, onLogout }) => {
