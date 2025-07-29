@@ -154,68 +154,52 @@ const ChildDevelopmentInsights: React.FC = () => {
         <div className="text-center text-gray-400 mt-6">No symptoms found.</div>
       ) : (
 
-        <div className="relative w-full overflow-x-auto overflow-y-visible py-6 bg-white border rounded shadow">
-          <div className="timeline-container relative min-h-[400px] w-full overflow-visible">
-            {/* Central horizontal line */}
-            <div className="absolute top-1/2 left-0 w-full h-0.5 bg-gray-300 z-0" />
 
-            <div className="flex flex-row gap-10 px-6 justify-start items-center relative z-10 min-w-full">
+        <div className="relative w-full overflow-x-auto overflow-y-visible py-6 bg-white border rounded shadow">
+          <div className="timeline-container relative min-h-[420px] w-full overflow-visible">
+            {/* Central horizontal line */}
+            <div className="absolute inset-x-0 top-1/2 h-0.5 bg-gray-400 z-0" />
+
+            <div className="relative z-10 flex flex-row gap-10 px-6 min-w-fit items-center">
               {[...data].reverse().map((entry, index) => {
                 const isAbove = index % 2 === 0;
                 const color = getColorForIntent(entry.intent);
                 const key = `${entry.timestamp}-${entry.symptom}-${index}`;
                 return (
-                  <div
-                    key={key}
-                    className="relative flex flex-col items-center min-w-[140px] sm:min-w-[160px] h-full group"
-                  >
-                    {/* Dot centered on timeline */}
+                  <div key={key} className="relative flex flex-col items-center min-w-[140px] sm:min-w-[160px] h-full group">
+                    {/* Dot anchored to exact center line */}
                     <div
-                      className="absolute w-3 h-3 rounded-full border border-white shadow z-10"
+                      className="absolute z-10 w-3 h-3 rounded-full border border-white shadow"
                       style={{
-                        backgroundColor: color,
                         top: "50%",
                         transform: "translateY(-50%)",
+                        backgroundColor: color,
                       }}
                     />
 
-                    {/* Top layout */}
+                    {/* Top label + stem */}
                     {isAbove && (
-                      <div className="absolute bottom-1/2 mb-6 flex flex-col items-center">
-                        <div
-                          className="w-0.5 h-12"
-                          style={{ backgroundColor: color }}
-                        />
+                      <div className="absolute bottom-1/2 mb-4 flex flex-col items-center">
+                        <div className="w-0.5 h-12" style={{ backgroundColor: color }} />
                         <div className="mt-2 text-center bg-white border rounded shadow px-3 py-1 text-xs w-[140px]">
-                          <div className="font-semibold text-sm text-gray-800">
-                            {entry.symptom}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {format(new Date(entry.timestamp), "dd MMM yyyy")}
-                          </div>
+                          <div className="font-semibold text-sm text-gray-800">{entry.symptom}</div>
+                          <div className="text-xs text-gray-500">{format(new Date(entry.timestamp), "dd MMM yyyy")}</div>
                         </div>
                       </div>
                     )}
 
-                    {/* Bottom layout */}
+                    {/* Bottom label + stem */}
                     {!isAbove && (
-                      <div className="absolute top-1/2 mt-6 flex flex-col items-center">
-                        <div
-                          className="w-0.5 h-12"
-                          style={{ backgroundColor: color }}
-                        />
+                      <div className="absolute top-1/2 mt-4 flex flex-col items-center">
+                        <div className="w-0.5 h-12" style={{ backgroundColor: color }} />
                         <div className="mt-2 text-center bg-white border rounded shadow px-3 py-1 text-xs w-[140px]">
-                          <div className="font-semibold text-sm text-gray-800">
-                            {entry.symptom}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {format(new Date(entry.timestamp), "dd MMM yyyy")}
-                          </div>
+                          <div className="font-semibold text-sm text-gray-800">{entry.symptom}</div>
+                          <div className="text-xs text-gray-500">{format(new Date(entry.timestamp), "dd MMM yyyy")}</div>
                         </div>
                       </div>
                     )}
 
-                    {/* Tooltip on hover */}
+                    {/* Tooltip remains unchanged */}
                     {entry.associated_symptoms?.length > 0 && (
                       <div
                         className={`absolute z-20 bg-white border shadow-md p-2 text-xs rounded w-48 ${
@@ -236,6 +220,7 @@ const ChildDevelopmentInsights: React.FC = () => {
             </div>
           </div>
         </div>
+
 
 
 
