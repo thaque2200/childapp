@@ -171,7 +171,7 @@ const ChildDevelopmentInsights: React.FC = () => {
                     <div
                       className="absolute z-10 w-3 h-3 rounded-full border border-white shadow"
                       style={{
-                        top: "50%",
+                        top: "0%",
                         transform: "translateY(-50%)",
                         backgroundColor: color,
                       }}
