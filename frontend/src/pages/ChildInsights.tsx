@@ -124,14 +124,14 @@ const ChildDevelopmentInsights: React.FC = () => {
 
   return (
     <div className="p-4">
-      <h2 className="text-xl font-semibold mb-4">Symptom Timeline</h2>
+      <h2 className="text-xl font-semibold mb-4">Discussion Timeline</h2>
 
       <div className="mb-4">
         <label
           htmlFor="intentFilter"
           className="block text-sm font-medium text-gray-700 mb-1"
         >
-          Filter by Intent:
+          Filter by Persona:
         </label>
         <select
           id="intentFilter"
@@ -139,7 +139,7 @@ const ChildDevelopmentInsights: React.FC = () => {
           onChange={(e) => setSelectedIntent(e.target.value || null)}
           className="p-2 border rounded w-full sm:w-64"
         >
-          <option value="">All Intents</option>
+          <option value="">All Personas</option>
           {availableIntents.map((i) => (
             <option key={i} value={i}>
               {i}
@@ -153,58 +153,93 @@ const ChildDevelopmentInsights: React.FC = () => {
       ) : data.length === 0 ? (
         <div className="text-center text-gray-400 mt-6">No symptoms found.</div>
       ) : (
-        <div className="relative h-[320px] overflow-x-auto overflow-y-visible timeline-container">
-          <div className="absolute top-1/2 left-0 w-full h-0.5 bg-gray-400 z-0" />
 
-          <div className="flex flex-row gap-10 px-6 justify-start items-center relative z-10">
-            {[...data].reverse().map((entry, index) => {
-              const isAbove = index % 2 === 0;
-              const color = getColorForIntent(entry.intent);
-              const key = `${entry.timestamp}-${entry.symptom}-${index}`;
-              return (
-                <div
-                  key={key}
-                  className="relative flex flex-col items-center min-w-[140px] sm:min-w-[160px] h-full group"
-                >
-                  {isAbove ? (
-                    <>
-                      <div className="mb-2 text-center bg-white border rounded shadow px-3 py-1 text-xs w-[140px]">
-                        <div className="font-semibold text-gray-700">{format(new Date(entry.timestamp), "dd MMM yyyy")}</div>
-                        <div className="text-gray-600">{entry.symptom}</div>
-                      </div>
-                      <div className="h-16 w-0.5" style={{ backgroundColor: color }} />
-                      <div className="w-3 h-3 rounded-full border border-white shadow z-10" style={{ backgroundColor: color }} />
-                    </>
-                  ) : (
-                    <>
-                      <div className="w-3 h-3 rounded-full border border-white shadow z-10" style={{ backgroundColor: color }} />
-                      <div className="h-16 w-0.5" style={{ backgroundColor: color }} />
-                      <div className="mt-2 text-center bg-white border rounded shadow px-3 py-1 text-xs w-[140px]">
-                        <div className="font-semibold text-gray-700">{format(new Date(entry.timestamp), "dd MMM yyyy")}</div>
-                        <div className="text-gray-600">{entry.symptom}</div>
-                      </div>
-                    </>
-                  )}
+        <div className="bg-white rounded-lg shadow border p-6 max-w-7xl mx-auto overflow-x-auto">
+          <div className="relative h-[320px] timeline-container">
+            {/* Central horizontal line */}
+            <div className="absolute top-1/2 left-0 w-full h-0.5 bg-gray-300 z-0" />
 
-                  {entry.associated_symptoms?.length > 0 && (
+            <div className="flex flex-row gap-10 px-6 justify-start items-center relative z-10 min-w-full">
+              {[...data].reverse().map((entry, index) => {
+                const isAbove = index % 2 === 0;
+                const color = getColorForIntent(entry.intent);
+                const key = `${entry.timestamp}-${entry.symptom}-${index}`;
+                return (
+                  <div
+                    key={key}
+                    className="relative flex flex-col items-center min-w-[140px] sm:min-w-[160px] h-full group"
+                  >
+                    {/* Dot centered on timeline */}
                     <div
-                      className={`absolute z-20 bg-white border shadow-md p-2 text-xs rounded w-48 ${
-                        isAbove ? "top-[-120px]" : "bottom-[-120px]"
-                      } left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition`}
-                    >
-                      <strong className="block text-gray-800 mb-1">Associated Symptoms:</strong>
-                      <ul className="list-disc list-inside text-gray-600">
-                        {entry.associated_symptoms.map((s, idx) => (
-                          <li key={idx}>{s}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                      className="absolute w-3 h-3 rounded-full border border-white shadow z-10"
+                      style={{
+                        backgroundColor: color,
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                      }}
+                    />
+
+                    {/* Top layout */}
+                    {isAbove && (
+                      <div className="absolute bottom-1/2 mb-6 flex flex-col items-center">
+                        <div
+                          className="w-0.5 h-12"
+                          style={{ backgroundColor: color }}
+                        />
+                        <div className="mt-2 text-center bg-white border rounded shadow px-3 py-1 text-xs w-[140px]">
+                          <div className="font-semibold text-sm text-gray-800">
+                            {entry.symptom}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {format(new Date(entry.timestamp), "dd MMM yyyy")}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Bottom layout */}
+                    {!isAbove && (
+                      <div className="absolute top-1/2 mt-6 flex flex-col items-center">
+                        <div
+                          className="w-0.5 h-12"
+                          style={{ backgroundColor: color }}
+                        />
+                        <div className="mt-2 text-center bg-white border rounded shadow px-3 py-1 text-xs w-[140px]">
+                          <div className="font-semibold text-sm text-gray-800">
+                            {entry.symptom}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {format(new Date(entry.timestamp), "dd MMM yyyy")}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Tooltip on hover */}
+                    {entry.associated_symptoms?.length > 0 && (
+                      <div
+                        className={`absolute z-20 bg-white border shadow-md p-2 text-xs rounded w-48 ${
+                          isAbove ? "top-[-160px]" : "bottom-[-160px]"
+                        } left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition`}
+                      >
+                        <strong className="block text-gray-800 mb-1">Associated Symptoms:</strong>
+                        <ul className="list-disc list-inside text-gray-600">
+                          {entry.associated_symptoms.map((s, idx) => (
+                            <li key={idx}>{s}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
+
+
+
+
       )}
     </div>
   );
