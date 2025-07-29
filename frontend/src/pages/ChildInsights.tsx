@@ -154,9 +154,9 @@ const ChildDevelopmentInsights: React.FC = () => {
         <div className="text-center text-gray-400 mt-6">No symptoms found.</div>
       ) : (
 
-      <div className="h-[320px] sm:h-[360px] md:h-[400px]">
-        <div className="relative w-full overflow-x-auto overflow-y-visible bg-white border rounded shadow">
-          <div className="timeline-container relative h-[320px] w-full overflow-visible">
+      <div className="flex justify-center w-full">
+        <div className="w-full max-w-7xl overflow-x-auto rounded-lg border border-gray-200 shadow bg-white p-4">
+          <div className="timeline-container relative min-h-[420px] w-full overflow-visible">
             {/* Central horizontal line */}
             <div className="absolute inset-x-0 top-1/2 h-0.5 bg-gray-400 z-0" />
 
@@ -179,7 +179,7 @@ const ChildDevelopmentInsights: React.FC = () => {
 
                     {/* Top label + stem */}
                     {isAbove && (
-                      <div className="absolute bottom-1/2 mb-4 flex flex-col items-center">
+                      <div className="absolute top-[calc(50%-48px)] flex flex-col items-center">
                         <div className="w-0.5 h-12" style={{ backgroundColor: color }} />
                         <div className="mt-2 text-center bg-white border rounded shadow px-3 py-1 text-xs w-[140px]">
                           <div className="font-semibold text-sm text-gray-800">{entry.symptom}</div>
@@ -190,7 +190,7 @@ const ChildDevelopmentInsights: React.FC = () => {
 
                     {/* Bottom label + stem */}
                     {!isAbove && (
-                      <div className="absolute top-1/2 mt-4 flex flex-col items-center">
+                      <div className="absolute top-[calc(50%+8px)] flex flex-col items-center">
                         <div className="w-0.5 h-12" style={{ backgroundColor: color }} />
                         <div className="mt-2 text-center bg-white border rounded shadow px-3 py-1 text-xs w-[140px]">
                           <div className="font-semibold text-sm text-gray-800">{entry.symptom}</div>
