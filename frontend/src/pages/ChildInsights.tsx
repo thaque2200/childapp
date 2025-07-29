@@ -177,9 +177,8 @@ const ChildDevelopmentInsights: React.FC = () => {
                       }}
                     />
 
-                    {/* Top label + stem */}
                     {isAbove && (
-                      <div className="absolute top-[calc(50%-100px)] flex flex-col items-center">
+                      <div className="absolute top-[calc(50%-30px)] flex flex-col items-center">
                         <div className="h-10 w-0.5" style={{ backgroundColor: color }} />
                         <div className="mb-1 text-center bg-white border rounded shadow px-3 py-1 text-xs w-[140px]">
                           <div className="font-semibold text-sm text-gray-800">{entry.symptom}</div>
@@ -188,7 +187,6 @@ const ChildDevelopmentInsights: React.FC = () => {
                       </div>
                     )}
 
-                    {/* Bottom label + stem */}
                     {!isAbove && (
                       <div className="absolute top-[calc(50%+10px)] flex flex-col items-center">
                         <div className="h-10 w-0.5" style={{ backgroundColor: color }} />
