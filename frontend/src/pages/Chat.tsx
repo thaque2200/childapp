@@ -19,6 +19,7 @@ import { format } from "date-fns";
 
 const API_URL = import.meta.env.VITE_API_URL;
 const API_URL_PEDITRICIAN = import.meta.env.VITE_API_URL_PEDITRICIAN;
+const API_URL_PSYCHOLOGIST= import.meta.env.VITE_API_URL_PSYCHOLOGIST;
 const API_URL_SQL = import.meta.env.VITE_API_URL_SQL;
 
 
@@ -66,6 +67,11 @@ export default function Chat() {
   const [followups, setFollowups] = useState<Record<string, string>>({});
   const [primarySymptomAvailable, setPrimarySymptomAvailable] = useState(false);
   const [showSessionCompleteToast, setShowSessionCompleteToast] = useState(false);
+  const [socket, setSocket] = useState<WebSocket | null>(null);
+  const [activeWS, setActiveWS] = useState(false);
+  const [psychologistHistory, setPsychologistHistory] = useState<any[]>([]);
+  const [psychologistBuffer, setPsychologistBuffer] = useState<string[]>([]);
+
 
   const resetFollowUp = () => {
     setParsedSymptom(null);
@@ -183,6 +189,9 @@ export default function Chat() {
     return () => unsubscribe();
   }, []);
 
+
+
+
   const sendMessage = async () => {
     const user = auth.currentUser;
     if (!user) return alert("You must be logged in");
@@ -194,9 +203,9 @@ export default function Chat() {
 
     try {
       let responseText = "";
-      let timestamp = new Date().toISOString();
+      const timestamp = new Date().toISOString();
 
-      // Step 1: Check if we are in follow-up mode
+      // Step 1: If in follow-up mode, use pediatrician update flow
       if (followUpMode) {
         const res = await axios.post(
           `${API_URL_PEDITRICIAN}/pediatrician/update`,
@@ -213,24 +222,20 @@ export default function Chat() {
         const responseData = res.data;
         setParsedSymptom(responseData.parsed_symptom || {});
         setFollowUpBuffer((prev) => [...prev, question]);
-
-        // ✅ Always use backend value
         setPrimarySymptomAvailable(responseData.primary_symptom_available);
 
         if (responseData.status === "incomplete") {
-          // Still missing info — ask next follow-up
           setMissingFields(responseData.missing_fields);
           setFollowUpMode(true);
           setRequiredFields(responseData.required_fields || []);
           setFollowups(responseData.followup_questions || {});
           responseText = Object.values(responseData.followup_questions || {}).join("\n");
         } else {
-          // ✅ Final turn — reset everything
           setFollowUpMode(false);
           setMissingFields([]);
           setRequiredFields([]);
           setFollowups({});
-          setPrimarySymptomAvailable(false); // ✅ Reset
+          setPrimarySymptomAvailable(false);
 
           responseText = responseData.guidance;
           setShowSessionCompleteToast(true);
@@ -251,11 +256,7 @@ export default function Chat() {
           );
 
           setHistory([
-            {
-              question: fullQuestion,
-              response: responseText,
-              timestamp,
-            },
+            { question: fullQuestion, response: responseText, timestamp },
             ...history,
           ]);
 
@@ -263,11 +264,10 @@ export default function Chat() {
           setParsedSymptom(null);
         }
 
-        return; // Don't proceed further
+        return;
       }
 
-
-      // Step 2: Initial message → classify intent
+      // Step 2: Detect intent
       const intentRes = await axios.post(
         `${API_URL}/intent`,
         { message: question },
@@ -275,15 +275,72 @@ export default function Chat() {
       );
 
       const intent = intentRes.data.response?.[0]?.label || "error_classification";
+      const newPersona = INTENT_TO_PERSONA[intent] || "Persona Inactive";
 
-      if (!followUpMode) {
-        const newPersona = INTENT_TO_PERSONA[intent] || "Persona Inactive";
-        setActivePersona(newPersona);
-        localStorage.setItem("activePersona", newPersona);
+      setActivePersona(newPersona);
+      localStorage.setItem("activePersona", newPersona);
+
+      // Step 3: Handle Child Psychologist flow via WebSocket
+      if (intent === "Child Psychologist") {
+        resetFollowUp(); // clear pediatric state
+
+        const ws = new WebSocket(`${import.meta.env.API_URL_PSYCHOLOGIST.replace("https", "wss")}/ws/child-psychologist`);
+
+        ws.onopen = () => {
+          ws.send(JSON.stringify({ message: question }));
+          setPsychologistBuffer([question]);
+          setPsychologistHistory([{ role: "user", content: question }]);
+        };
+
+        ws.onmessage = async (event) => {
+          const data = JSON.parse(event.data);
+
+          if (data.status === "incomplete") {
+            setPsychologistHistory((prev) => [
+              ...prev,
+              { role: "assistant", content: data.followup_question },
+            ]);
+          }
+
+          if (data.status === "complete") {
+            setPsychologistHistory((prev) => [
+              ...prev,
+              { role: "assistant", content: data.guidance },
+            ]);
+            setShowSessionCompleteToast(true);
+            setTimeout(() => setShowSessionCompleteToast(false), 3000);
+
+            await axios.post(
+              `${API_URL_SQL}/save-chat`,
+              {
+                question: psychologistBuffer.join("\n"),
+                intent: "Child Psychologist",
+                parsed_symptom: {},
+                response: data.guidance,
+                timestamp,
+              },
+              { headers: { Authorization: `Bearer ${idToken}` } }
+            );
+
+            setHistory([
+              { question: psychologistBuffer.join("\n"), response: data.guidance, timestamp },
+              ...history,
+            ]);
+
+            ws.close();
+          }
+        };
+
+        ws.onerror = (err) => {
+          console.error("WebSocket error:", err);
+          ws.close();
+        };
+
+        return;
       }
 
+      // Step 4: Handle Pediatrician flow
       if (intent === "Pediatrician") {
-        // Step 3: Start pediatrician flow
         const res = await axios.post(
           `${API_URL_PEDITRICIAN}/pediatrician`,
           { message: question },
@@ -295,112 +352,82 @@ export default function Chat() {
         setFollowUpBuffer([question]);
 
         if (responseData.status === "incomplete") {
-            setFollowUpMode(true);
-            setMissingFields(responseData.missing_fields);
-            setRequiredFields(responseData.required_fields || []);
-            setFollowups(responseData.followup_questions || {});
+          setFollowUpMode(true);
+          setMissingFields(responseData.missing_fields);
+          setRequiredFields(responseData.required_fields || []);
+          setFollowups(responseData.followup_questions || {});
+          setPrimarySymptomAvailable(responseData.primary_symptom_available);
+          responseText = Object.values(responseData.followup_questions).join("\n");
+        } else {
+          responseText = responseData.guidance;
+          setFollowUpMode(false);
+          setMissingFields([]);
+          setRequiredFields([]);
+          setFollowups({});
+          setPrimarySymptomAvailable(false);
+          setFollowUpBuffer([]);
+          setParsedSymptom(null);
+          setShowSessionCompleteToast(true);
+          setTimeout(() => setShowSessionCompleteToast(false), 3000);
 
-            // ❗️Use this backend value
-            const primarySymptomAvailable = responseData.primary_symptom_available;
+          await axios.post(
+            `${API_URL_SQL}/save-chat`,
+            {
+              question,
+              intent: "Pediatrician",
+              parsed_symptom: responseData.parsed_symptom || {},
+              response: responseText,
+              timestamp,
+            },
+            { headers: { Authorization: `Bearer ${idToken}` } }
+          );
 
-            // Store it in state for next call to /pediatrician/update
-            setPrimarySymptomAvailable(primarySymptomAvailable);
-            
-            responseText = Object.values(responseData.followup_questions).join("\n");
-          } else {
-            // ✅ Final guidance on first turn — no follow-up needed
-            responseText = responseData.guidance;
+          setHistory([
+            { question, response: responseText, timestamp },
+            ...history,
+          ]);
+        }
 
-            // ✅ Reset all triage state
-            setFollowUpMode(false);
-            setMissingFields([]);
-            setRequiredFields([]);
-            setFollowups({});
-            setPrimarySymptomAvailable(false);
-            setFollowUpBuffer([]);
-            setParsedSymptom(null);
-            setShowSessionCompleteToast(true);
-            setTimeout(() => setShowSessionCompleteToast(false), 3000);
+        return;
+      }
 
-            await axios.post(
-              `${API_URL_SQL}/save-chat`,
-              {
-                question,
-                intent: "Pediatrician",
-                parsed_symptom: responseData.parsed_symptom || {},
-                response: responseText,
-                timestamp,
-              },
-              { headers: { Authorization: `Bearer ${idToken}` } }
-            );
+      // Step 5: Handle Out of Scope or Other Personas
+      resetFollowUp();
 
-            setHistory([
-              {
-                question,
-                response: responseText,
-                timestamp,
-              },
-              ...history,
-            ]);
-          }
-      } else if (intent === "out_of_scope") {
-        resetFollowUp(); // ✅ Clear stale pediatric state
+      if (intent === "out_of_scope") {
         responseText =
           "I'm not trained to handle this kind of question yet. Please ask something related to your child’s health, symptoms, or developmental concerns.";
-        
-        await axios.post(
-          `${API_URL_SQL}/save-chat`,
-          {
-            question,
-            intent: "out_of_scope",
-            parsed_symptom: {},
-            response: responseText,
-            timestamp,
-          },
-          { headers: { Authorization: `Bearer ${idToken}` } }
-        );
-
-        setHistory([
-          {
-            question,
-            response: responseText,
-            timestamp,
-          },
-          ...history,
-        ]);
       } else {
-        resetFollowUp(); // ✅ Same cleanup for other personas
-
         responseText =
           "I'm currently only trained to handle pediatric health concerns. Stay tuned — soon I’ll support topics like child psychology, nutrition, sleep coaching, and parenting guidance.";
-        
-        await axios.post(
-          `${API_URL_SQL}/save-chat`,
-          {
-            question,
-            intent: intent || "Unknown",
-            parsed_symptom: {},
-            response: responseText,
-            timestamp,
-          },
-          { headers: { Authorization: `Bearer ${idToken}` } }
-        );
-
-        setHistory([
-          {
-            question,
-            response: responseText,
-            timestamp,
-          },
-          ...history,
-        ]);
       }
+
+      await axios.post(
+        `${API_URL_SQL}/save-chat`,
+        {
+          question,
+          intent: intent || "Unknown",
+          parsed_symptom: {},
+          response: responseText,
+          timestamp,
+        },
+        { headers: { Authorization: `Bearer ${idToken}` } }
+      );
+
+      setHistory([
+        { question, response: responseText, timestamp },
+        ...history,
+      ]);
     } catch (err) {
-      console.error("Error in pediatrician flow:", err);
+      console.error("Error in sendMessage:", err);
     } finally {
       setLoadingResponse(false);
     }
   };
+
+
+
+  
   
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#F2FAFD' }}>

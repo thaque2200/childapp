@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+openai
+google-cloud-secret-manager
+firebase-admin
+google-auth
+google-cloud-storage
+langgraph
