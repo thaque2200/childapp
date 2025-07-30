@@ -277,6 +277,10 @@ export default function Chat() {
       const intent = intentRes.data.response?.[0]?.label || "error_classification";
       const newPersona = INTENT_TO_PERSONA[intent] || "Persona Inactive";
 
+      console.log("Intent response:", intentRes.data);
+      console.log("Extracted intent:", intent);
+      console.log("Extracted intent:", newPersona);
+
       setActivePersona(newPersona);
       localStorage.setItem("activePersona", newPersona);
 
