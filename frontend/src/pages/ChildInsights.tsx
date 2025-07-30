@@ -163,7 +163,7 @@ const ChildDevelopmentInsights: React.FC = () => {
             
             
             {/* Central horizontal line */}
-            <div className="absolute inset-x-0 top-1/2 h-0.5 bg-gray-400 z-0" />
+            <div className="absolute inset-x-0 top-1/2   -gray-400 z-0" />
 
             <div className="relative z-10 flex flex-row flex-wrap justify-between items-center w-full">
               {[...data].reverse().map((entry, index) => {
