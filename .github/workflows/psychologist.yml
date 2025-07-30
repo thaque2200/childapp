@@ -40,7 +40,7 @@ jobs:
 
       - name: Build and push Docker image
         run: |
-          cd childpsychologist
+          cd psychologist
           gcloud builds submit . \
             --tag=us-east1-docker.pkg.dev/axial-trail-460618-u6/childpsychologist/childpsychologist \
             --gcs-log-dir=gs://axial-trail-460618-u6_cloudbuild/build-logs/
