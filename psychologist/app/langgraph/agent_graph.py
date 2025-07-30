@@ -1,6 +1,8 @@
 from langgraph.graph import StateGraph, END
 from typing import Annotated, Dict, List, Literal, Union, TypedDict
 from .tools import check_context_completeness, generate_psychological_guidance
+from langchain_core.runnables import RunnableLambda
+
 
 class AgentState(TypedDict):
     history: List[Dict[str, str]]
@@ -39,7 +41,7 @@ def build_agent():
     builder.add_node("add_user_message", add_user_message)
     builder.add_node("check_completeness", check_completeness_node)
     builder.add_node("generate_guidance", generate_guidance_node)
-    builder.add_node("planner", planner)
+    builder.add_node("planner", RunnableLambda(planner))
 
     builder.set_entry_point("add_user_message")
     builder.add_edge("add_user_message", "planner")
