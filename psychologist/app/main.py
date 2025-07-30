@@ -1,5 +1,5 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from langgraph.agent_graph import build_agent
+from app.langgraph.agent_graph import build_agent
 from app.services.auth_dependency import verify_firebase_token
 
 router = APIRouter()
