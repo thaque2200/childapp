@@ -3,7 +3,7 @@ name: Deploy Child Psychologist Backend to Cloud Run
 on:
   push:
     paths:
-      - 'childpsychologist/**'
+      - 'psychologist/**'
     branches: [main]
 
 jobs:
