@@ -7,9 +7,6 @@ graph = build_agent()
 
 @router.websocket("/ws/child-psychologist")
 async def websocket_endpoint(websocket: WebSocket):
-    print("⚡️ Connection accepted")
-    await websocket.accept()
-
     # 🔐 Step 1: Manual Firebase Auth check
     try:
         user = await verify_firebase_token_wss(websocket)
@@ -18,6 +15,10 @@ async def websocket_endpoint(websocket: WebSocket):
         print("❌ Firebase auth failed:", e)
         await websocket.close(code=4401)
         return
+    
+    print("⚡️ Connection accepting")
+    await websocket.accept()
+    print("⚡️ Connection accepted")
 
     history = []
 
