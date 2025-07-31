@@ -98,18 +98,12 @@ async def generate_guidance_node(state: AgentState) -> AgentState:
 
 def build_agent():
     builder = StateGraph(AgentState)
+
     builder.add_node("add_user_message", add_user_message)
     builder.add_node("check_completeness", check_completeness_node)
-    builder.add_node("generate_guidance", generate_guidance_node)
-    # builder.add_node("planner", RunnableLambda(planner))
 
     builder.set_entry_point("add_user_message")
-    builder.add_edge("add_user_message", "planner")
-    # builder.add_conditional_edges("planner", {
-    #     "check_completeness": check_completeness_node,
-    #     "generate_guidance": generate_guidance_node
-    # })
+    builder.add_edge("add_user_message", "check_completeness")
     builder.add_edge("check_completeness", END)
-    # builder.add_edge("generate_guidance", END)
 
     return builder.compile()
