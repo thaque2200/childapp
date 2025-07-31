@@ -1,3 +1,5 @@
+print("✅ psychologist_route.py loaded")
+
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from app.langgraph.agent_graph import build_agent
 from app.services.auth_dependency import verify_firebase_token, verify_firebase_token_wss
