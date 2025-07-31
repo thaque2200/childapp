@@ -284,8 +284,8 @@ export default function Chat() {
       if (intent === "Child Psychologist") {
         resetFollowUp(); // clear pediatric state
 
-        console.log("Psychologist URL:", import.meta.env.API_URL_PSYCHOLOGIST);
-        const ws = new WebSocket(`${import.meta.env.API_URL_PSYCHOLOGIST.replace("https", "wss")}/ws/child-psychologist`);
+        console.log("Psychologist URL:", API_URL_PSYCHOLOGIST);
+        const ws = new WebSocket(`${API_URL_PSYCHOLOGIST.replace("https", "wss")}/ws/child-psychologist`);
 
         ws.onopen = () => {
           ws.send(JSON.stringify({ message: question }));
