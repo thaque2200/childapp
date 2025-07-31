@@ -97,9 +97,11 @@ def build_agent():
 
     builder.set_entry_point("add_user_message")
     builder.add_edge("add_user_message", "planner")
+
+    # ✅ Use function objects here
     builder.add_conditional_edges("planner", {
-        "check_completeness": "check_completeness",
-        "generate_guidance": "generate_guidance"
+        "check_completeness": check_completeness_node,
+        "generate_guidance": generate_guidance_node
     })
 
     builder.add_edge("check_completeness", END)
