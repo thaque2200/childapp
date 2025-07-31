@@ -1,22 +1,29 @@
 print("✅ psychologist_route.py loaded")
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from app.langgraph.agent_graph import build_agent
 from app.services.auth_dependency import verify_firebase_token, verify_firebase_token_wss
 
+try:
+    print("🔧 Importing and building agent...")
+    from app.langgraph.agent_graph import build_agent
+    graph = build_agent()
+    print("✅ Agent ready")
+except Exception as e:
+    print("❌ Failed to build agent:", e)
+
 router = APIRouter()
-graph = build_agent()
+
 
 @router.websocket("/ws/child-psychologist")
 async def websocket_endpoint(websocket: WebSocket):
     # 🔐 Step 1: Manual Firebase Auth check
-    # try:
-    #     user = await verify_firebase_token_wss(websocket)
-    #     print("🔐 Firebase auth successful")
-    # except Exception as e:
-    #     print("❌ Firebase auth failed:", e)
-    #     await websocket.close(code=4401)
-    #     return
+    try:
+        user = await verify_firebase_token_wss(websocket)
+        print("🔐 Firebase auth successful")
+    except Exception as e:
+        print("❌ Firebase auth failed:", e)
+        await websocket.close(code=4401)
+        return
     
     print("⚡️ Connection accepting")
     await websocket.accept()
