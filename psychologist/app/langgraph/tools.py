@@ -5,7 +5,7 @@ import json
 API_KEY = get_secret("OPENAI_API_KEY")
 client = AsyncOpenAI(api_key=API_KEY)
 
-async def check_context_completeness(history, new_message):
+def check_context_completeness(history, new_message):
     prompt = f"""
 You are a child psychologist assistant. A parent is seeking guidance about their child's mental health.
 
