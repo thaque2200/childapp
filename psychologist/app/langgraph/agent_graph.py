@@ -35,22 +35,27 @@ async def generate_guidance_node(state: AgentState) -> AgentState:
         "final_guidance": final,
     }
 
+
 def build_agent():
     builder = StateGraph(AgentState)
 
+    # Step 1: Register node names
     builder.add_node("add_user_message", add_user_message)
     builder.add_node("check_completeness", check_completeness_node)
     builder.add_node("generate_guidance", generate_guidance_node)
     builder.add_node("planner", RunnableLambda(planner))
 
+    # Step 2: Entry and static edges
     builder.set_entry_point("add_user_message")
     builder.add_edge("add_user_message", "planner")
 
+    # ✅ Step 3: Conditional edges must point to functions or Runnables
     builder.add_conditional_edges("planner", {
-        "check_completeness": "check_completeness",   # ✅ fix here
-        "generate_guidance": "generate_guidance"      # ✅ fix here
+        "check_completeness": check_completeness_node,
+        "generate_guidance": generate_guidance_node
     })
 
+    # Step 4: Terminal edges (strings are fine here)
     builder.add_edge("check_completeness", END)
     builder.add_edge("generate_guidance", END)
 
