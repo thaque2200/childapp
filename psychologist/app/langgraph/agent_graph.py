@@ -47,8 +47,8 @@ def build_agent():
     builder.add_edge("add_user_message", "planner")
 
     builder.add_conditional_edges("planner", {
-        "check_completeness": check_completeness_node,
-        "generate_guidance": generate_guidance_node
+        "check_completeness": "check_completeness",   # ✅ fix here
+        "generate_guidance": "generate_guidance"      # ✅ fix here
     })
 
     builder.add_edge("check_completeness", END)

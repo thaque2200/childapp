@@ -2,8 +2,8 @@ from openai import AsyncOpenAI
 from app.services.read_secret import get_secret
 import json
 
-# API_KEY = get_secret("OPENAI_API_KEY")
-client = AsyncOpenAI(api_key='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')
+API_KEY = get_secret("OPENAI_API_KEY")
+client = AsyncOpenAI(api_key=API_KEY)
 
 async def check_context_completeness(history, new_message):
     prompt = f"""
