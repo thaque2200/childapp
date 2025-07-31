@@ -197,9 +197,12 @@ export default function Chat() {
     if (!user) return alert("You must be logged in");
 
     const idToken = await user.getIdToken();
-    const question = input;
+    const rawInput = input.trim();
+    if (!rawInput) return; // prevent sending empty message
     setInput("");
     setLoadingResponse(true);
+
+    const question = rawInput; // ensure we store the message BEFORE clearing input
 
     try {
       let responseText = "";
@@ -283,18 +286,23 @@ export default function Chat() {
       // Step 3: Handle Child Psychologist flow via WebSocket
       if (intent === "Child Psychologist") {
         resetFollowUp(); // clear pediatric state
+        
+        const wsUrl = API_URL_PSYCHOLOGIST.replace("https", "wss") + "/ws/child-psychologist";
+        const newSocket = new WebSocket(wsUrl);
 
-        console.log("Psychologist URL:", API_URL_PSYCHOLOGIST);
-        const ws = new WebSocket(`${API_URL_PSYCHOLOGIST.replace("https", "wss")}/ws/child-psychologist`);
+        console.log("🌐 Connecting to:", wsUrl);
 
-        ws.onopen = () => {
-          ws.send(JSON.stringify({ message: question }));
+        newSocket.onopen = () => {
+          console.log("✅ WebSocket open, sending message:", question);
+          newSocket.send(JSON.stringify({ message: question }));
           setPsychologistBuffer([question]);
           setPsychologistHistory([{ role: "user", content: question }]);
+          setSocket(newSocket);
         };
 
-        ws.onmessage = async (event) => {
+        newSocket.onmessage = async (event) => {
           const data = JSON.parse(event.data);
+          console.log("📩 Received message from server:", data);
 
           if (data.status === "incomplete") {
             setPsychologistHistory((prev) => [
@@ -328,13 +336,19 @@ export default function Chat() {
               ...history,
             ]);
 
-            ws.close();
+            newSocket.close();
+            setSocket(null);
           }
         };
 
-        ws.onerror = (err) => {
+        newSocket.onerror = (err) => {
           console.error("WebSocket error:", err);
-          ws.close();
+          newSocket.close();
+          setSocket(null);
+        };
+
+        newSocket.onclose = (event) => {
+          console.log("🔌 WebSocket closed", event.code, event.reason);
         };
 
         return;
