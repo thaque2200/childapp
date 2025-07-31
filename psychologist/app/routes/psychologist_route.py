@@ -32,8 +32,9 @@ async def websocket_endpoint(websocket: WebSocket):
                 "followup_question": None,
                 "final_guidance": None
             }
-
+            print("🧠 Agent being used:")
             result = await graph.ainvoke(state)
+            print("🧠 Agent result:", result)
             history = result["history"]
 
             if result.get("ready_to_answer") and result.get("final_guidance"):
