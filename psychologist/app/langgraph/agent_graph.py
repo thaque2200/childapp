@@ -1,6 +1,6 @@
 from langgraph.graph import StateGraph, END
 from typing import Annotated, Dict, List, Literal, Union, TypedDict
-from .tools import check_context_completeness, generate_psychological_guidance
+from app.langgraph.tools import check_context_completeness, generate_psychological_guidance
 from langchain_core.runnables import RunnableLambda
 
 
