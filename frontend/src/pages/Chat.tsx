@@ -289,7 +289,9 @@ export default function Chat() {
         
         const idToken = await user.getIdToken();
         // const wsUrl = API_URL_PSYCHOLOGIST.replace("https", "wss") + `/ws/child-psychologist?token=${idToken}`;
-        const wsUrl = `${API_URL_PSYCHOLOGIST.replace("https", "wss")}/ws/child-psychologist?token=${idToken}`;
+        const wsUrl = `${API_URL_PSYCHOLOGIST.replace("https", "ws")}/ws/child-psychologist?token=${idToken}`;
+
+        // const wsUrl = `ws://localhost:8000/ws/child-psychologist?token=${idToken}`;
         const newSocket = new WebSocket(wsUrl);
         console.log("🌐 Connecting to:", wsUrl);
 
