@@ -1,6 +1,6 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from app.langgraph.agent_graph import build_agent
-from app.services.auth_dependency import verify_firebase_token
+from app.services.auth_dependency import verify_firebase_token, verify_firebase_token_wss
 
 router = APIRouter()
 graph = build_agent()
@@ -12,7 +12,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
     # 🔐 Step 1: Manual Firebase Auth check
     try:
-        user = await verify_firebase_token(websocket)
+        user = await verify_firebase_token_wss(websocket)
         print("🔐 Firebase auth successful")
     except Exception as e:
         print("❌ Firebase auth failed:", e)
