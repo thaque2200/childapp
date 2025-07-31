@@ -7,12 +7,15 @@ graph = build_agent()
 
 @router.websocket("/ws/child-psychologist")
 async def websocket_endpoint(websocket: WebSocket):
+    print("⚡️ Connection accepted")
     await websocket.accept()
 
     # 🔐 Step 1: Manual Firebase Auth check
     try:
         user = await verify_firebase_token(websocket)
+        print("🔐 Firebase auth successful")
     except Exception as e:
+        print("❌ Firebase auth failed:", e)
         await websocket.close(code=4401)
         return
 
@@ -20,9 +23,12 @@ async def websocket_endpoint(websocket: WebSocket):
 
     try:
         while True:
+            print("⏳ Waiting for message from frontend...")
             data = await websocket.receive_json()
+            print("📨 Received message from frontend:", data)
             message = data.get("message", "")
             if not message:
+                print("⚠️ No message in payload")
                 continue
 
             state = {
@@ -32,12 +38,13 @@ async def websocket_endpoint(websocket: WebSocket):
                 "followup_question": None,
                 "final_guidance": None
             }
-            print("🧠 Agent being used:")
+            print("🧠 Calling agent with state:", state)
             result = await graph.ainvoke(state)
             print("🧠 Agent result:", result)
             history = result["history"]
 
             if result.get("ready_to_answer") and result.get("final_guidance"):
+                print("🎯 Sending final guidance and closing")
                 await websocket.send_json({
                     "status": "complete",
                     "guidance": result["final_guidance"],
@@ -46,6 +53,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 await websocket.close()
                 break
             else:
+                print("🤖 Sending follow-up question")
                 await websocket.send_json({
                     "status": "incomplete",
                     "followup_question": result.get("followup_question"),
@@ -54,3 +62,6 @@ async def websocket_endpoint(websocket: WebSocket):
 
     except WebSocketDisconnect:
         print("WebSocket disconnected")
+    except Exception as e:
+        print("❗ Unexpected error:", e)
+        await websocket.close()
