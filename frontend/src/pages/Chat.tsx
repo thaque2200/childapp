@@ -276,11 +276,7 @@ export default function Chat() {
 
       const intent = intentRes.data.response?.[0]?.label || "error_classification";
       const newPersona = INTENT_TO_PERSONA[intent] || "Persona Inactive";
-
-      console.log("Intent response:", intentRes.data);
       console.log("Extracted intent:", intent);
-      console.log("Extracted intent:", newPersona);
-
       setActivePersona(newPersona);
       localStorage.setItem("activePersona", newPersona);
 
@@ -288,6 +284,7 @@ export default function Chat() {
       if (intent === "Child Psychologist") {
         resetFollowUp(); // clear pediatric state
 
+        console.log("Psychologist URL:", import.meta.env.API_URL_PSYCHOLOGIST);
         const ws = new WebSocket(`${import.meta.env.API_URL_PSYCHOLOGIST.replace("https", "wss")}/ws/child-psychologist`);
 
         ws.onopen = () => {
