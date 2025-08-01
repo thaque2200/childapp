@@ -1,19 +1,17 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { auth } from "../firebase";
 import {
-  Baby,
   Brain,
-  Moon,
-  Stethoscope,
   School,
   Apple,
   Users,
-  HelpCircle
+  Stethoscope,
+  Moon,
+  HelpCircle,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
-
 
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -44,44 +42,51 @@ const PERSONA_ICONS: Record<string, JSX.Element> = {
   "Persona Inactive": <HelpCircle className="w-4 h-4 inline-block mr-1 text-gray-400" />
 };
 
+
+
+// ✅ Custom hook for sessionStorage-backed state
+function useSessionState<T>(key: string, defaultValue: T) {
+  const [value, setValue] = useState<T>(() => {
+    const stored = sessionStorage.getItem(key);
+    return stored ? JSON.parse(stored) : defaultValue;
+  });
+
+  useEffect(() => {
+    sessionStorage.setItem(key, JSON.stringify(value));
+  }, [key, value]);
+
+  return [value, setValue] as const;
+}
+
+interface ChatEntry {
+  question: string;
+  response: string;
+  timestamp: string;
+}
+
 export default function Chat() {
   const [input, setInput] = useState("");
-  interface ChatEntry {
-    question: string;
-    response: string;
-    timestamp: string;
-  }
   const [history, setHistory] = useState<ChatEntry[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [loadingResponse, setLoadingResponse] = useState(false);
-  const [activePersona, setActivePersona] = useState(() => {
-    return sessionStorage.getItem("activePersona") || "Persona Inactive";
-  });
-
-  useEffect(() => {
-    sessionStorage.setItem("activePersona", activePersona);
-  }, [activePersona]);
-
-  const [parsedSymptom, setParsedSymptom] = useState<Record<string, any> | null>(null);
-  const [missingFields, setMissingFields] = useState<string[]>([]);
-  const [followUpMode, setFollowUpMode] = useState(false);
-  const [followUpBuffer, setFollowUpBuffer] = useState<string[]>([]); // To collect all related messages
-  const [requiredFields, setRequiredFields] = useState<string[]>([]);
-  const [followups, setFollowups] = useState<Record<string, string>>({});
-  const [primarySymptomAvailable, setPrimarySymptomAvailable] = useState(false);
   const [showSessionCompleteToast, setShowSessionCompleteToast] = useState(false);
-  const [socket, setSocket] = useState<WebSocket | null>(null);
+  const [activePersona, setActivePersona] = useSessionState(
+    "activePersona",
+    "Persona Inactive"
+  );
+  const [parsedSymptom, setParsedSymptom] = useSessionState<Record<string, any> | null>("followUpSymptom", null);
+  const [missingFields, setMissingFields] = useSessionState<string[]>("missingFields", []);
+  const [followUpMode, setFollowUpMode] = useSessionState<boolean>("followUpMode", false);
+  const [followUpBuffer, setFollowUpBuffer] = useSessionState<string[]>("followUpBuffer", []);
+  const [requiredFields, setRequiredFields] = useSessionState<string[]>("requiredFields", []);
+  const [followups, setFollowups] = useSessionState<Record<string, string>>("followups", {});
+  const [primarySymptomAvailable, setPrimarySymptomAvailable] = useSessionState<boolean>("primarySymptomAvailable", false);
   const [psychologistFollowup, setPsychologistFollowup] = useState<string | null>(null);
-  const [psychologistMessages, setPsychologistMessages] = useState(() => {
-  const stored = sessionStorage.getItem("psychologistMessages");
-    return stored ? JSON.parse(stored) : [];
-  });
+  const [psychologistMessages, setPsychologistMessages] = useSessionState<{ role: string; content: string }[]>("psychologistMessages", []);
+  const socketRef = useRef<WebSocket | null>(null);
 
-  useEffect(() => {
-    sessionStorage.setItem("psychologistMessages", JSON.stringify(psychologistMessages));
-  }, [psychologistMessages]);
-
-  const resetFollowUp = () => {
+  // ✅ Reset logic simplified
+  const resetFollowUp = (clearPsychologist = true) => {
     setParsedSymptom(null);
     setMissingFields([]);
     setFollowUpBuffer([]);
@@ -89,112 +94,28 @@ export default function Chat() {
     setFollowups({});
     setFollowUpMode(false);
     setPrimarySymptomAvailable(false);
-    setPsychologistMessages([]); // 🔹 Clear live chat
-
-    [
-      "followUpMode",
-      "followUpSymptom",
-      "followUpBuffer",
-      "requiredFields",
-      "followups",
-      "primarySymptomAvailable",
-      "psychologistMessages"
-    ].forEach((key) => sessionStorage.removeItem(key));
+    if (clearPsychologist) setPsychologistMessages([]);
   };
 
-
-  useEffect(() => {
-    return () => {
-      if (socket) socket.close();
-    };
-  }, [socket]);
-
+  // ✅ Scroll into view for psychologist follow-up
   useEffect(() => {
     if (psychologistFollowup) {
-      document.querySelector('input[type="text"]')?.scrollIntoView({ behavior: "smooth" });
+      document
+        .querySelector('input[type="text"]')
+        ?.scrollIntoView({ behavior: "smooth" });
     }
   }, [psychologistFollowup]);
 
+  // ✅ Close socket on page unload
   useEffect(() => {
-    const stored = sessionStorage.getItem("missingFields");
-    if (stored) setMissingFields(JSON.parse(stored));
-  }, []);
+    const handleBeforeUnload = () => {
+      if (socketRef) socketRef.close();
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [socketRef]);
 
-  useEffect(() => {
-    if (missingFields.length > 0)
-      sessionStorage.setItem("missingFields", JSON.stringify(missingFields));
-    else
-      sessionStorage.removeItem("missingFields");
-  }, [missingFields]);
-
-  useEffect(() => {
-    const stored = sessionStorage.getItem("requiredFields");
-    if (stored) setRequiredFields(JSON.parse(stored));
-  }, []);
-
-  // Restore parsedSymptom from session
-  useEffect(() => {
-    const stored = sessionStorage.getItem("followUpSymptom");
-    if (stored) setParsedSymptom(JSON.parse(stored));
-  }, []);
-
-  useEffect(() => {
-    if (parsedSymptom)
-      sessionStorage.setItem("followUpSymptom", JSON.stringify(parsedSymptom));
-    else
-      sessionStorage.removeItem("followUpSymptom");
-  }, [parsedSymptom]);
-
-  useEffect(() => {
-    if (requiredFields.length)
-      sessionStorage.setItem("requiredFields", JSON.stringify(requiredFields));
-    else
-      sessionStorage.removeItem("requiredFields");
-  }, [requiredFields]);
-
-  useEffect(() => {
-    const stored = sessionStorage.getItem("followups");
-    if (stored) setFollowups(JSON.parse(stored));
-  }, []);
-  useEffect(() => {
-    if (Object.keys(followups).length)
-      sessionStorage.setItem("followups", JSON.stringify(followups));
-    else
-      sessionStorage.removeItem("followups");
-  }, [followups]);
-
-  // Restore followUpBuffer from session
-  useEffect(() => {
-    const storedBuffer = sessionStorage.getItem("followUpBuffer");
-    if (storedBuffer) setFollowUpBuffer(JSON.parse(storedBuffer));
-  }, []);
-
-  useEffect(() => {
-    if (followUpBuffer.length > 0)
-      sessionStorage.setItem("followUpBuffer", JSON.stringify(followUpBuffer));
-    else
-      sessionStorage.removeItem("followUpBuffer");
-  }, [followUpBuffer]);
-
-  // Restore followUpMode
-  useEffect(() => {
-    const storedMode = sessionStorage.getItem("followUpMode");
-    if (storedMode === "true") setFollowUpMode(true);
-  }, []);
-
-  useEffect(() => {
-    if (followUpMode) {
-      sessionStorage.setItem("followUpMode", "true");
-    } else {
-      sessionStorage.removeItem("followUpMode");
-    }
-  }, [followUpMode]);
-
-  useEffect(() => {
-    sessionStorage.setItem("primarySymptomAvailable", primarySymptomAvailable.toString());
-  }, [primarySymptomAvailable]);
-
-
+  // ✅ Clear follow-up states on persona change
   useEffect(() => {
     setPsychologistFollowup(null);
     setFollowUpBuffer([]);
@@ -203,25 +124,12 @@ export default function Chat() {
     setParsedSymptom(null);
   }, [activePersona]);
 
-
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      if (socket) {
-        socket.close();
-      }
-    };
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => {
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-    };
-  }, [socket]);
-
+  // ✅ Fetch history on login
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
       if (!user) return;
       try {
         const token = await user.getIdToken(true);
-        console.log("Token (on load):", token); // ✅ Debug token here REMOVE IN PRODUCTION
         const res = await axios.get(`${API_URL_SQL}/history`, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -237,6 +145,41 @@ export default function Chat() {
 
 
 
+  useEffect(() => {
+    // If session has psychologist messages and no active socket, reconnect
+    const hadPsychologistSession =
+      activePersona === "Child Psychologist" && psychologistMessages.length > 0;
+
+    if (hadPsychologistSession && !socketRef.current) {
+      const reconnect = async () => {
+        const user = auth.currentUser;
+        if (!user) return;
+        const idToken = await user.getIdToken(true);
+
+        const wsUrl = `${API_URL_PSYCHOLOGIST.replace(
+          "https",
+          "wss"
+        )}/ws/child-psychologist?token=${idToken}`;
+        const newSocket = new WebSocket(wsUrl);
+        socketRef.current = newSocket;
+
+        newSocket.onmessage = (event) => {
+          const data = JSON.parse(event.data);
+          console.log("📩 Restored WS:", data);
+          if (Array.isArray(data.history)) setPsychologistMessages(data.history);
+        };
+      };
+
+      reconnect();
+    }
+
+    return () => {
+      // ❌ Do NOT close socket on unmount
+      // socketRef.current?.close();  <-- remove this
+    };
+  }, []);
+
+
 
   const sendMessage = async () => {
     const user = auth.currentUser;
@@ -244,19 +187,39 @@ export default function Chat() {
 
     const idToken = await user.getIdToken();
     const rawInput = input.trim();
-    if (!rawInput) return; // prevent sending empty message
+    if (!rawInput) return;
     setInput("");
     setLoadingResponse(true);
 
-    const question = rawInput; // store user question before clearing input
     const timestamp = new Date().toISOString();
+    const question = rawInput;
 
     try {
-      let responseText = "";
+      // ✅ Helper to save chat
+      const saveChat = async (
+        questionText: string,
+        intent: string,
+        response: string,
+        parsedSymptom: Record<string, any> = {}
+      ) => {
+        await axios.post(
+          `${API_URL_SQL}/save-chat`,
+          {
+            question: questionText,
+            intent,
+            parsed_symptom: parsedSymptom,
+            response,
+            timestamp,
+          },
+          { headers: { Authorization: `Bearer ${idToken}` } }
+        );
+        setHistory((prev) => [
+          { question: questionText, response, timestamp },
+          ...prev,
+        ]);
+      };
 
-      // --------------------------
-      // 🟢 Pediatrician (Follow-up or New Question)
-      // --------------------------
+      // ✅ Pediatrician Flow (multi-turn or single)
       if (followUpMode || activePersona === "Pediatrician") {
         const isFollowUp = followUpMode;
         const fullQuestion = isFollowUp
@@ -277,60 +240,36 @@ export default function Chat() {
             }
           : { message: question };
 
-        const res = await axios.post(url, payload, {
+        const { data: responseData } = await axios.post(url, payload, {
           headers: { Authorization: `Bearer ${idToken}` },
         });
 
-        const responseData = res.data;
-
-        // Update local states
+        // Update session states
         setParsedSymptom(responseData.parsed_symptom || {});
         setFollowUpBuffer((prev) => (isFollowUp ? [...prev, question] : [question]));
         setPrimarySymptomAvailable(responseData.primary_symptom_available || false);
 
         if (responseData.status === "incomplete") {
-          // Continue collecting required fields
+          // Continue collecting details
           setFollowUpMode(true);
           setMissingFields(responseData.missing_fields || []);
           setRequiredFields(responseData.required_fields || []);
           setFollowups(responseData.followup_questions || {});
-          responseText = Object.values(responseData.followup_questions || {}).join("\n");
         } else {
-          // Pediatrician session complete
-          setFollowUpMode(false);
-          setMissingFields([]);
-          setRequiredFields([]);
-          setFollowups({});
-          setPrimarySymptomAvailable(false);
-          setFollowUpBuffer([]);
-          setParsedSymptom(null);
-
-          responseText = responseData.guidance;
+          // Session complete
+          resetFollowUp(false);
+          const guidance = responseData.guidance;
           setShowSessionCompleteToast(true);
           setTimeout(() => setShowSessionCompleteToast(false), 3000);
 
-          await axios.post(
-            `${API_URL_SQL}/save-chat`,
-            {
-              question: fullQuestion,
-              intent: "Pediatrician",
-              parsed_symptom: responseData.parsed_symptom || {},
-              response: responseText,
-              timestamp,
-            },
-            { headers: { Authorization: `Bearer ${idToken}` } }
-          );
-
-          setHistory([{ question: fullQuestion, response: responseText, timestamp }, ...history]);
+          await saveChat(fullQuestion, "Pediatrician", guidance, responseData.parsed_symptom || {});
         }
 
         setLoadingResponse(false);
         return;
       }
 
-      // --------------------------
-      // 🧠 Child Psychologist (WebSocket)
-      // --------------------------
+      // ✅ Intent Classification
       const intentRes = await axios.post(
         `${API_URL}/intent`,
         { message: question },
@@ -339,32 +278,24 @@ export default function Chat() {
 
       const intent = intentRes.data.response?.[0]?.label || "error_classification";
       const newPersona = INTENT_TO_PERSONA[intent] || "Persona Inactive";
-      console.log("Extracted intent:", intent);
 
-      // Reset leftover follow-ups if persona changes
-      if (newPersona !== activePersona) {
-        resetFollowUp();
-        setPsychologistFollowup(null);
-      }
-
-      setActivePersona(newPersona);
-      localStorage.setItem("activePersona", newPersona);
-
+      // ✅ Child Psychologist Flow
       if (intent === "Child Psychologist") {
-        // ✅ Reuse existing WebSocket if open
-        if (socket && socket.readyState === WebSocket.OPEN) {
-          socket.send(JSON.stringify({ message: question }));
+        // Reuse socket if it's still open
+        if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+          socketRef.current.send(JSON.stringify({ message: question }));
           setLoadingResponse(false);
           return;
         }
 
-        // Create and configure new WebSocket
+        // Create a new socket if none exists or was closed
         const wsUrl = `${API_URL_PSYCHOLOGIST.replace(
           "https",
           "wss"
         )}/ws/child-psychologist?token=${idToken}`;
+
         const newSocket = new WebSocket(wsUrl);
-        console.log("🌐 Connecting to:", wsUrl);
+        socketRef.current = newSocket;
 
         newSocket.onopen = () => {
           console.log("✅ WebSocket open, sending message:", question);
@@ -372,97 +303,65 @@ export default function Chat() {
         };
 
         newSocket.onmessage = async (event) => {
-        const data = JSON.parse(event.data);
-        console.log("📩 Received message:", data);
+          const data = JSON.parse(event.data);
+          console.log("📩 WS message:", data);
 
-        // Update live messages for Current Discussion
-        if (Array.isArray(data.history)) {
-          setPsychologistMessages(data.history);
-        }
+          if (Array.isArray(data.history)) {
+            setPsychologistMessages(data.history);
+          }
 
-        if (data.status === "incomplete") {
-          setPsychologistFollowup(data.followup_question || null);
-        }
+          if (data.status === "incomplete") {
+            setPsychologistFollowup(data.followup_question || null);
+          }
 
-        if (data.status === "complete") {
-          setShowSessionCompleteToast(true);
-          setPsychologistFollowup(null);
-          setTimeout(() => setShowSessionCompleteToast(false), 3000);
+          if (data.status === "complete") {
+            setShowSessionCompleteToast(true);
+            setPsychologistFollowup(null);
+            setTimeout(() => setShowSessionCompleteToast(false), 3000);
 
-          const userQuestion = (data.history || [])
-            .filter((msg) => msg.role === "user")
-            .map((msg) => msg.content)
-            .join("\n");
+            const userQuestion = (data.history || [])
+              .filter((m) => m.role === "user")
+              .map((m) => m.content)
+              .join("\n");
 
-          await axios.post(
-            `${API_URL_SQL}/save-chat`,
-            {
-              question: userQuestion,
-              intent: "Child Psychologist",
-              parsed_symptom: {},
-              response: data.guidance,
-              timestamp,
-            },
-            { headers: { Authorization: `Bearer ${idToken}` } }
-          );
+            await saveChat(userQuestion, "Child Psychologist", data.guidance);
 
-          setHistory([{ question: userQuestion, response: data.guidance, timestamp }, ...history]);
+            // ✅ Clear session but keep socket alive for new conversation
+            resetFollowUp();
+            setPsychologistMessages([]);
+          }
+        };
 
+        newSocket.onerror = (err) => {
+          console.error("WebSocket error:", err);
           newSocket.close();
-          setSocket(null);
-          // 🔹 Clear psychologist live messages and session data
-          setPsychologistMessages([]);
-          sessionStorage.removeItem("psychologistMessages");
-        }
-      };
+          socketRef.current = null;
+        };
 
-      newSocket.onerror = (err) => {
-        console.error("WebSocket error:", err);
-        newSocket.close();
-        setSocket(null);
-      };
+        newSocket.onclose = () => {
+          console.log("🔌 WebSocket closed");
+          socketRef.current = null;
+        };
 
-      newSocket.onclose = (event) => {
-        console.log("🔌 WebSocket closed", event.code, event.reason);
-      };
-
-      setSocket(newSocket); // ✅ after assigning handlers
-      setLoadingResponse(false);
-      return;
+        setLoadingResponse(false);
+        return;
       }
 
-      // --------------------------
-      // ❌ Out of Scope / Fallback
-      // --------------------------
+
+      // ✅ Out of Scope
       resetFollowUp();
-
-      if (intent === "out_of_scope") {
-        responseText =
-          "I'm not trained to handle this kind of question yet. Please ask something related to your child’s health, symptoms, or developmental concerns.";
-      } else {
-        responseText =
-          "I'm currently only trained to handle pediatric health or child psychology queries. Stay tuned — soon I’ll support topics like nutrition, sleep coaching, and parenting guidance.";
-      }
-
-      await axios.post(
-        `${API_URL_SQL}/save-chat`,
-        {
-          question,
-          intent: intent || "Unknown",
-          parsed_symptom: {},
-          response: responseText,
-          timestamp,
-        },
-        { headers: { Authorization: `Bearer ${idToken}` } }
-      );
-
-      setHistory([{ question, response: responseText, timestamp }, ...history]);
+      const fallback =
+        intent === "out_of_scope"
+          ? "I'm not trained to handle this kind of question yet. Please ask something related to your child’s health or development."
+          : "I'm currently only trained to handle pediatric or child psychology queries. More personas coming soon.";
+      await saveChat(question, intent || "Unknown", fallback);
     } catch (err) {
       console.error("Error in sendMessage:", err);
     } finally {
       setLoadingResponse(false);
     }
   };
+
 
   
 
@@ -471,28 +370,30 @@ export default function Chat() {
   
   
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#F2FAFD' }}>
+      <div className="min-h-screen" style={{ backgroundColor: "#F2FAFD" }}>
+        {/* Banner */}
+        <div className="w-full">
+          <img
+            src="/banner-illustration.png"
+            alt="Family with AI icons"
+            className="w-full object-contain"
+            style={{ height: "30vh", maxHeight: "300px" }}
+          />
+        </div>
 
-      {/* Banner Image */}
-      <div className="w-full">
-        <img
-          src="/banner-illustration.png"
-          alt="Family with AI icons"
-          className="w-full object-contain"
-          style={{ height: '30vh', maxHeight: '300px' }}
-        />
-      </div>
+        {/* Description */}
+        <div className="bg-white w-full px-6 py-4 border-b border-gray-300">
+          <p className="text-gray-700 max-w-screen-2xl mx-auto text-center">
+            This platform puts the parent in control, respects real-world usage
+            patterns, and builds a quietly intelligent memory of each child.
+          </p>
+        </div>
 
-      {/* Platform Description */}
-      <div className="bg-white w-full px-6 py-4 border-b border-gray-300">
-        <p className="text-gray-700 max-w-screen-2xl mx-auto text-center">
-          This platform puts the parent in control, respects real-world usage patterns, and builds a quietly intelligent memory of each child. It provides situationally aware support using cutting-edge technology and backed by medical-grade sources — designed not to nag or judge, but to assist, reassure, and empower.
-        </p>
-      </div>
-
-      {/* Content */}
-      <div className="p-6 max-w-4xl mx-auto">
-          <h2 className="text-2xl font-bold mb-4 text-center">Smart Parent Assistant</h2>
+        {/* Content */}
+        <div className="p-6 max-w-4xl mx-auto">
+          <h2 className="text-2xl font-bold mb-4 text-center">
+            Smart Parent Assistant
+          </h2>
 
           <AnimatePresence mode="wait">
             <motion.div
@@ -503,7 +404,9 @@ export default function Chat() {
               transition={{ duration: 0.3 }}
               className="text-center text-sm text-blue-600 mb-2 flex justify-center items-center gap-2"
             >
-              {PERSONA_ICONS[activePersona] || <HelpCircle className="w-4 h-4 text-gray-400" />}
+              {PERSONA_ICONS[activePersona] || (
+                <HelpCircle className="w-4 h-4 text-gray-400" />
+              )}
               <span>
                 Persona Activated: <strong>{activePersona}</strong>
               </span>
@@ -599,7 +502,7 @@ export default function Chat() {
             )}
 
             {/* 🔹 Current Discussion (live user + AI exchanges from WebSocket) */}
-            {socket && activePersona === "Child Psychologist" && psychologistMessages.length > 0 && (
+            {socketRef.current && activePersona === "Child Psychologist" && psychologistMessages.length > 0 && (
               <div className="mt-4 p-4 border border-purple-100 rounded bg-white shadow-sm text-sm text-gray-700">
                 <h4 className="font-semibold text-purple-600 mb-2">Current Discussion</h4>
                 {psychologistMessages.map((msg, idx) => (

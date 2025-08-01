@@ -15,6 +15,12 @@ interface TimelineEntry {
   associated_symptoms?: string[];
 }
 
+interface ChildInfo {
+  name: string;
+  age: string;
+  sex: string;
+}
+
 const CACHE_KEY = "childTimelineCache";
 const TIMESTAMP_KEY = "childTimelineCacheTimestamp";
 const INTENTS_KEY = "childTimelineIntentCache";
@@ -39,6 +45,23 @@ const ChildDevelopmentInsights: React.FC = () => {
   const [availableIntents, setAvailableIntents] = useState<string[]>([]);
   const [authChecked, setAuthChecked] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // Children state
+  const [children, setChildren] = useState<ChildInfo[]>([
+    { name: "", age: "", sex: "" },
+  ]);
+
+  // Add a new child row
+  const addChild = () => {
+    setChildren([...children, { name: "", age: "", sex: "" }]);
+  };
+
+  // Handle child field changes
+  const handleChildChange = (index: number, field: keyof ChildInfo, value: string) => {
+    const updated = [...children];
+    updated[index][field] = value;
+    setChildren(updated);
+  };
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
@@ -124,6 +147,51 @@ const ChildDevelopmentInsights: React.FC = () => {
 
   return (
     <div className="p-4">
+      <h2 className="text-xl font-semibold mb-4">Child Information</h2>
+      
+      <div className="space-y-4 mb-6">
+        {children.map((child, idx) => (
+          <div
+            key={idx}
+            className="border rounded-lg p-4 bg-gray-50 space-y-2 shadow-sm"
+          >
+            <h3 className="font-semibold text-gray-700 mb-2">Child {idx + 1}</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <input
+                type="text"
+                placeholder="Name"
+                value={child.name}
+                onChange={(e) => handleChildChange(idx, "name", e.target.value)}
+                className="p-2 border rounded w-full"
+              />
+              <input
+                type="text"
+                placeholder="Age"
+                value={child.age}
+                onChange={(e) => handleChildChange(idx, "age", e.target.value)}
+                className="p-2 border rounded w-full"
+              />
+              <select
+                value={child.sex}
+                onChange={(e) => handleChildChange(idx, "sex", e.target.value)}
+                className="p-2 border rounded w-full"
+              >
+                <option value="">Sex</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+          </div>
+        ))}
+        <button
+          onClick={addChild}
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+        >
+          + Add Another Child
+        </button>
+      </div>
+
       <h2 className="text-xl font-semibold mb-4">Discussion Timeline</h2>
 
       <div className="mb-4">
@@ -153,86 +221,87 @@ const ChildDevelopmentInsights: React.FC = () => {
       ) : data.length === 0 ? (
         <div className="text-center text-gray-400 mt-6">No symptoms found.</div>
       ) : (
+        <div className="flex justify-center w-full">
+          <div className="w-full max-w-7xl overflow-x-auto rounded-lg border border-gray-200 shadow bg-white p-4">
+            <div className="timeline-container relative min-h-[420px] w-screen px-4 overflow-visible">
+              <div className="absolute inset-x-0 top-1/2 -gray-400 z-0" />
 
-      <div className="flex justify-center w-full">
-        <div className="w-full max-w-7xl overflow-x-auto rounded-lg border border-gray-200 shadow bg-white p-4">
-
-          {/* Timeline Container */}
-          <div className="timeline-container relative min-h-[420px] w-screen px-4 overflow-visible">
-
-            
-            
-            {/* Central horizontal line */}
-            <div className="absolute inset-x-0 top-1/2   -gray-400 z-0" />
-
-            <div className="relative z-10 flex flex-row flex-wrap justify-between items-center w-full">
-              {[...data].reverse().map((entry, index) => {
-                const isAbove = index % 2 === 0;
-                const color = getColorForIntent(entry.intent);
-                const key = `${entry.timestamp}-${entry.symptom}-${index}`;
-                return (
-                  <div key={key} className="relative flex flex-col items-center flex-1 min-w-[160px] max-w-[200px] group">
-                  {/* Each Vertical Line */}
-                    
-                    
-                    {/* Dot anchored to exact center line */}
+              <div className="relative z-10 flex flex-row flex-wrap justify-between items-center w-full">
+                {[...data].reverse().map((entry, index) => {
+                  const isAbove = index % 2 === 0;
+                  const color = getColorForIntent(entry.intent);
+                  const key = `${entry.timestamp}-${entry.symptom}-${index}`;
+                  return (
                     <div
-                      className="absolute z-10 w-3 h-3 rounded-full border border-white shadow"
-                      style={{
-                        top: "100%",
-                        transform: "translateY(-50%)",
-                        backgroundColor: color,
-                      }}
-                    />
-
-
-
-                    {isAbove && (
-                      <div className="absolute top-[calc(50%-30px)] flex flex-col items-center">
-                        <div className="h-10 w-0.5" style={{ backgroundColor: color }} />
-                        <div className="mb-1 text-center bg-white border rounded shadow px-3 py-1 text-xs w-[140px]">
-                          <div className="font-semibold text-sm text-gray-800">{entry.symptom}</div>
-                          <div className="text-xs text-gray-500">{format(new Date(entry.timestamp), "dd MMM yyyy")}</div>
-                        </div>
-                      </div>
-                    )}
-
-                    {!isAbove && (
-                      <div className="absolute top-[calc(50%+10px)] flex flex-col items-center">
-                        <div className="h-10 w-0.5" style={{ backgroundColor: color }} />
-                        <div className="mt-1 text-center bg-white border rounded shadow px-3 py-1 text-xs w-[140px]">
-                          <div className="font-semibold text-sm text-gray-800">{entry.symptom}</div>
-                          <div className="text-xs text-gray-500">{format(new Date(entry.timestamp), "dd MMM yyyy")}</div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Tooltip remains unchanged */}
-                    {entry.associated_symptoms?.length > 0 && (
+                      key={key}
+                      className="relative flex flex-col items-center flex-1 min-w-[160px] max-w-[200px] group"
+                    >
                       <div
-                        className={`absolute z-20 bg-white border shadow-md p-2 text-xs rounded w-48 ${
-                          isAbove ? "top-[-160px]" : "bottom-[-160px]"
-                        } left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition`}
-                      >
-                        <strong className="block text-gray-800 mb-1">Associated Symptoms:</strong>
-                        <ul className="list-disc list-inside text-gray-600">
-                          {entry.associated_symptoms.map((s, idx) => (
-                            <li key={idx}>{s}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+                        className="absolute z-10 w-3 h-3 rounded-full border border-white shadow"
+                        style={{
+                          top: "100%",
+                          transform: "translateY(-50%)",
+                          backgroundColor: color,
+                        }}
+                      />
+
+                      {isAbove && (
+                        <div className="absolute top-[calc(50%-30px)] flex flex-col items-center">
+                          <div
+                            className="h-10 w-0.5"
+                            style={{ backgroundColor: color }}
+                          />
+                          <div className="mb-1 text-center bg-white border rounded shadow px-3 py-1 text-xs w-[140px]">
+                            <div className="font-semibold text-sm text-gray-800">
+                              {entry.symptom}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {format(new Date(entry.timestamp), "dd MMM yyyy")}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {!isAbove && (
+                        <div className="absolute top-[calc(50%+10px)] flex flex-col items-center">
+                          <div
+                            className="h-10 w-0.5"
+                            style={{ backgroundColor: color }}
+                          />
+                          <div className="mt-1 text-center bg-white border rounded shadow px-3 py-1 text-xs w-[140px]">
+                            <div className="font-semibold text-sm text-gray-800">
+                              {entry.symptom}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {format(new Date(entry.timestamp), "dd MMM yyyy")}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {entry.associated_symptoms?.length > 0 && (
+                        <div
+                          className={`absolute z-20 bg-white border shadow-md p-2 text-xs rounded w-48 ${
+                            isAbove ? "top-[-160px]" : "bottom-[-160px]"
+                          } left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition`}
+                        >
+                          <strong className="block text-gray-800 mb-1">
+                            Associated Symptoms:
+                          </strong>
+                          <ul className="list-disc list-inside text-gray-600">
+                            {entry.associated_symptoms.map((s, idx) => (
+                              <li key={idx}>{s}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
-      </div>
-
-
-
-
       )}
     </div>
   );
