@@ -1,46 +1,40 @@
-print("✅ psychologist_route.py loaded")
-
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from app.services.auth_dependency import verify_firebase_token, verify_firebase_token_wss
-
-try:
-    print("🔧 Importing and building agent...")
-    from app.langgraph.agent_graph import build_agent
-    graph = build_agent()
-    print("✅ Agent ready")
-except Exception as e:
-    print("❌ Failed to build agent:", e)
+from app.langgraph.agent_graph import build_agent
+    
 
 router = APIRouter()
+graph = build_agent()
 
 
 @router.websocket("/ws/child-psychologist")
 async def websocket_endpoint(websocket: WebSocket):
-    # 🔐 Step 1: Manual Firebase Auth check
     try:
         user = await verify_firebase_token_wss(websocket)
-        print("🔐 Firebase auth successful")
+        print(f"🔐 Firebase auth successful for user: {user.get('uid', 'unknown')}")
     except Exception as e:
         print("❌ Firebase auth failed:", e)
         await websocket.close(code=4401)
         return
-    
-    print("⚡️ Connection accepting")
+
     await websocket.accept()
-    print("⚡️ Connection accepted")
+    print("⚡️ WebSocket connection accepted")
 
     history = []
 
     try:
         while True:
-            print("⏳ Waiting for message from frontend...")
-            data = await websocket.receive_json()
-            print("📨 Received message from frontend:", data)
-            message = data.get("message", "")
+            try:
+                data = await websocket.receive_json()
+            except WebSocketDisconnect:
+                print("🔌 Client disconnected")
+                break
+
+            message = data.get("message")
             if not message:
-                print("⚠️ No message in payload")
                 continue
 
+            # 1️⃣ Prepare agent state
             state = {
                 "history": history,
                 "new_message": message,
@@ -48,30 +42,36 @@ async def websocket_endpoint(websocket: WebSocket):
                 "followup_question": None,
                 "final_guidance": None
             }
-            print("🧠 Calling agent with state:", state)
-            result = await graph.ainvoke(state)
-            print("🧠 Agent result:", result)
-            history = result["history"]
 
+            # 2️⃣ Invoke agent
+            result = await graph.ainvoke(state)
+
+            # 3️⃣ Append user turn
+            history.append({"role": "user", "content": message})
+
+            # 4️⃣ Handle response
             if result.get("ready_to_answer") and result.get("final_guidance"):
-                print("🎯 Sending final guidance and closing")
+                reply = result["final_guidance"]
+                history.append({"role": "assistant", "content": reply})
                 await websocket.send_json({
                     "status": "complete",
-                    "guidance": result["final_guidance"],
-                    "history": history
+                    "guidance": reply,
+                    "history": history,
                 })
-                await websocket.close()
-                break
+                # 🔹 Do not close; frontend will close after complete
             else:
-                print("🤖 Sending follow-up question")
+                reply = result.get("followup_question")
+                if reply:
+                    history.append({"role": "assistant", "content": reply})
                 await websocket.send_json({
                     "status": "incomplete",
-                    "followup_question": result.get("followup_question"),
-                    "history": history
+                    "followup_question": reply,
+                    "history": history,
                 })
 
-    except WebSocketDisconnect:
-        print("WebSocket disconnected")
     except Exception as e:
-        print("❗ Unexpected error:", e)
-        await websocket.close()
+        print(f"❗ Unexpected server error: {e}")
+        try:
+            await websocket.send_json({"status": "error", "message": str(e)})
+        finally:
+            await websocket.close()

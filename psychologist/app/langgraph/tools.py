@@ -5,7 +5,7 @@ import json
 API_KEY = get_secret("OPENAI_API_KEY")
 client = AsyncOpenAI(api_key=API_KEY)
 
-def check_context_completeness(history, new_message):
+async def check_context_completeness(history, new_message):
     prompt = f"""
 You are a child psychologist assistant. A parent is seeking guidance about their child's mental health.
 
@@ -37,6 +37,7 @@ Respond only with the JSON.
         messages=[{"role": "user", "content": prompt}]
     )
     return json.loads(response.choices[0].message.content.strip())
+
 
 async def generate_psychological_guidance(history, new_message):
     prompt = f"""

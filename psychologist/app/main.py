@@ -20,27 +20,3 @@ app.include_router(psychologist_route)
 @app.get("/")
 def ping():
     return {"message": "Psychologist backend is running"}
-
-
-
-@app.websocket("/debug")
-async def debug_ws(websocket: WebSocket):
-    print("🧪 Debug handler activated")
-    await websocket.accept()
-    await websocket.send_text("connected - type 'close' to exit")
-
-    try:
-        while True:
-            message = await websocket.receive_text()
-            print(f"🗣️ Received message: {message}")
-
-            if "close" in message.lower():
-                await websocket.send_text("👋 Closing connection as requested.")
-                await websocket.close()
-                print("🔒 WebSocket connection closed by user request")
-                break
-            else:
-                await websocket.send_text(f"Echo: {message}")
-
-    except WebSocketDisconnect:
-        print("❌ Client disconnected unexpectedly.")
