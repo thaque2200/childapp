@@ -230,6 +230,23 @@ export default function Chat() {
           resetFollowUp();
       }
 
+      // ✅ Intent Classification
+      const intentRes = await axios.post(
+        `${API_URL}/intent`,
+        { message: question },
+        { headers: { Authorization: `Bearer ${idToken}` } }
+      );
+
+      const intent = intentRes.data.response?.[0]?.label || "error_classification";
+      const newPersona = INTENT_TO_PERSONA[intent] || "Persona Inactive";
+
+      // ✅ Reset follow-up if persona actually changed
+      if (newPersona !== activePersona) {
+        resetFollowUp(false);  // keep psychologist messages intact
+      }
+
+      setActivePersona(newPersona);
+
       // ✅ Pediatrician Flow (multi-turn or single)
       if (followUpMode || activePersona === "Pediatrician") {
         const isFollowUp = followUpMode;
@@ -280,23 +297,6 @@ export default function Chat() {
         setLoadingResponse(false);
         return;
       }
-
-      // ✅ Intent Classification
-      const intentRes = await axios.post(
-        `${API_URL}/intent`,
-        { message: question },
-        { headers: { Authorization: `Bearer ${idToken}` } }
-      );
-
-      const intent = intentRes.data.response?.[0]?.label || "error_classification";
-      const newPersona = INTENT_TO_PERSONA[intent] || "Persona Inactive";
-
-      // ✅ Reset follow-up if persona actually changed
-      if (newPersona !== activePersona) {
-        resetFollowUp(false);  // keep psychologist messages intact
-      }
-
-      setActivePersona(newPersona);
 
       // ✅ Child Psychologist Flow
       if (intent === "Child Psychologist") {
