@@ -269,6 +269,7 @@ export default function Chat() {
         } else {
           // Session complete
           resetFollowUp(false);
+          setActivePersona("Persona Inactive");  // ✅ Reset persona
           const guidance = responseData.guidance;
           setShowSessionCompleteToast(true);
           setTimeout(() => setShowSessionCompleteToast(false), 3000);
