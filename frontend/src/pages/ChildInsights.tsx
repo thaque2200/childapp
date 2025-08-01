@@ -17,7 +17,7 @@ interface TimelineEntry {
 
 interface ChildInfo {
   name: string;
-  age: string;
+  dob: Date | null;
   sex: string;
 }
 
@@ -46,20 +46,30 @@ const ChildDevelopmentInsights: React.FC = () => {
   const [authChecked, setAuthChecked] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Children state
+  // Children state (DOB stored as Date)
   const [children, setChildren] = useState<ChildInfo[]>([
-    { name: "", age: "", sex: "" },
+    { name: "", dob: null, sex: "" },
   ]);
 
   // Add a new child row
   const addChild = () => {
-    setChildren([...children, { name: "", age: "", sex: "" }]);
+    setChildren([...children, { name: "", dob: null, sex: "" }]);
+  };
+
+  // Remove a child, keeping at least one
+  const removeChild = (index: number) => {
+    if (children.length === 1) return; // Prevent removing the last child
+    setChildren(children.filter((_, idx) => idx !== index));
   };
 
   // Handle child field changes
   const handleChildChange = (index: number, field: keyof ChildInfo, value: string) => {
     const updated = [...children];
-    updated[index][field] = value;
+    if (field === "dob") {
+      updated[index].dob = value ? new Date(value) : null;
+    } else {
+      updated[index][field] = value as any;
+    }
     setChildren(updated);
   };
 
@@ -153,28 +163,28 @@ const ChildDevelopmentInsights: React.FC = () => {
         {children.map((child, idx) => (
           <div
             key={idx}
-            className="border rounded-lg p-4 bg-gray-50 space-y-2 shadow-sm"
+            className="border rounded-lg p-4 bg-gray-50 space-y-2 shadow-sm relative"
           >
             <h3 className="font-semibold text-gray-700 mb-2">Child {idx + 1}</h3>
+            
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <input
                 type="text"
                 placeholder="Name"
                 value={child.name}
                 onChange={(e) => handleChildChange(idx, "name", e.target.value)}
-                className="p-2 border rounded w-full"
+                className="p-2 border rounded w-full min-w-0"
               />
               <input
-                type="text"
-                placeholder="Age"
-                value={child.age}
-                onChange={(e) => handleChildChange(idx, "age", e.target.value)}
-                className="p-2 border rounded w-full"
+                type="date"
+                value={child.dob ? child.dob.toISOString().split("T")[0] : ""}
+                onChange={(e) => handleChildChange(idx, "dob", e.target.value)}
+                className="p-2 border rounded w-full min-w-0"
               />
               <select
                 value={child.sex}
                 onChange={(e) => handleChildChange(idx, "sex", e.target.value)}
-                className="p-2 border rounded w-full"
+                className="p-2 border rounded w-full min-w-0"
               >
                 <option value="">Sex</option>
                 <option value="Male">Male</option>
@@ -182,8 +192,18 @@ const ChildDevelopmentInsights: React.FC = () => {
                 <option value="Other">Other</option>
               </select>
             </div>
+
+            {children.length > 1 && (
+              <button
+                onClick={() => removeChild(idx)}
+                className="absolute top-2 right-2 text-red-500 hover:text-red-700 text-sm"
+              >
+                ✕ Remove
+              </button>
+            )}
           </div>
         ))}
+
         <button
           onClick={addChild}
           className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
