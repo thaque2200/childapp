@@ -362,13 +362,22 @@ export default function Chat() {
         return;
       }
 
-
       // ✅ Out of Scope
+      console.log("Detected intent:", intent); // <-- log intent
       resetFollowUp();
+      setActivePersona("Persona Inactive");    // ✅ reset persona
+
+      // Close psychologist socket if still open
+      if (socketRef.current) {
+        socketRef.current.close();
+        socketRef.current = null;
+      }
+
       const fallback =
         intent === "out_of_scope"
           ? "I'm not trained to handle this kind of question yet. Please ask something related to your child’s health or development."
           : "I'm currently only trained to handle pediatric or child psychology queries. More personas coming soon.";
+
       await saveChat(question, intent || "Unknown", fallback);
     } catch (err) {
       console.error("Error in sendMessage:", err);
