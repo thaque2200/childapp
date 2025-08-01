@@ -55,8 +55,12 @@ export default function Chat() {
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [loadingResponse, setLoadingResponse] = useState(false);
   const [activePersona, setActivePersona] = useState(() => {
-    return localStorage.getItem("activePersona") || "Persona Inactive";
+    return sessionStorage.getItem("activePersona") || "Persona Inactive";
   });
+
+  useEffect(() => {
+    sessionStorage.setItem("activePersona", activePersona);
+  }, [activePersona]);
 
   const [parsedSymptom, setParsedSymptom] = useState<Record<string, any> | null>(null);
   const [missingFields, setMissingFields] = useState<string[]>([]);
@@ -68,8 +72,14 @@ export default function Chat() {
   const [showSessionCompleteToast, setShowSessionCompleteToast] = useState(false);
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const [psychologistFollowup, setPsychologistFollowup] = useState<string | null>(null);
+  const [psychologistMessages, setPsychologistMessages] = useState(() => {
+  const stored = sessionStorage.getItem("psychologistMessages");
+    return stored ? JSON.parse(stored) : [];
+  });
 
-
+  useEffect(() => {
+    sessionStorage.setItem("psychologistMessages", JSON.stringify(psychologistMessages));
+  }, [psychologistMessages]);
 
   const resetFollowUp = () => {
     setParsedSymptom(null);
@@ -79,14 +89,19 @@ export default function Chat() {
     setFollowups({});
     setFollowUpMode(false);
     setPrimarySymptomAvailable(false);
-    
-    sessionStorage.removeItem("followUpMode");
-    sessionStorage.removeItem("followUpSymptom");
-    sessionStorage.removeItem("followUpBuffer");
-    sessionStorage.removeItem("requiredFields");
-    sessionStorage.removeItem("followups");
-    sessionStorage.removeItem("primarySymptomAvailable");
+    setPsychologistMessages([]); // 🔹 Clear live chat
+
+    [
+      "followUpMode",
+      "followUpSymptom",
+      "followUpBuffer",
+      "requiredFields",
+      "followups",
+      "primarySymptomAvailable",
+      "psychologistMessages"
+    ].forEach((key) => sessionStorage.removeItem(key));
   };
+
 
   useEffect(() => {
     return () => {
@@ -233,49 +248,66 @@ export default function Chat() {
     setInput("");
     setLoadingResponse(true);
 
-    const question = rawInput; // ensure we store the message BEFORE clearing input
+    const question = rawInput; // store user question before clearing input
+    const timestamp = new Date().toISOString();
 
     try {
       let responseText = "";
-      const timestamp = new Date().toISOString();
 
-      // Step 1: If in follow-up mode, use pediatrician update flow
-      if (followUpMode) {
-        const res = await axios.post(
-          `${API_URL_PEDITRICIAN}/pediatrician/update`,
-          {
-            primary_symptom_available: primarySymptomAvailable,
-            new_message: question,
-            existing_symptom: parsedSymptom,
-            required_fields: requiredFields,
-            followups: followups,
-          },
-          { headers: { Authorization: `Bearer ${idToken}` } }
-        );
+      // --------------------------
+      // 🟢 Pediatrician (Follow-up or New Question)
+      // --------------------------
+      if (followUpMode || activePersona === "Pediatrician") {
+        const isFollowUp = followUpMode;
+        const fullQuestion = isFollowUp
+          ? [...followUpBuffer, question].join("\n")
+          : question;
+
+        const url = isFollowUp
+          ? `${API_URL_PEDITRICIAN}/pediatrician/update`
+          : `${API_URL_PEDITRICIAN}/pediatrician`;
+
+        const payload = isFollowUp
+          ? {
+              primary_symptom_available: primarySymptomAvailable,
+              new_message: question,
+              existing_symptom: parsedSymptom,
+              required_fields: requiredFields,
+              followups,
+            }
+          : { message: question };
+
+        const res = await axios.post(url, payload, {
+          headers: { Authorization: `Bearer ${idToken}` },
+        });
 
         const responseData = res.data;
+
+        // Update local states
         setParsedSymptom(responseData.parsed_symptom || {});
-        setFollowUpBuffer((prev) => [...prev, question]);
-        setPrimarySymptomAvailable(responseData.primary_symptom_available);
+        setFollowUpBuffer((prev) => (isFollowUp ? [...prev, question] : [question]));
+        setPrimarySymptomAvailable(responseData.primary_symptom_available || false);
 
         if (responseData.status === "incomplete") {
-          setMissingFields(responseData.missing_fields);
+          // Continue collecting required fields
           setFollowUpMode(true);
+          setMissingFields(responseData.missing_fields || []);
           setRequiredFields(responseData.required_fields || []);
           setFollowups(responseData.followup_questions || {});
           responseText = Object.values(responseData.followup_questions || {}).join("\n");
         } else {
+          // Pediatrician session complete
           setFollowUpMode(false);
           setMissingFields([]);
           setRequiredFields([]);
           setFollowups({});
           setPrimarySymptomAvailable(false);
+          setFollowUpBuffer([]);
+          setParsedSymptom(null);
 
           responseText = responseData.guidance;
           setShowSessionCompleteToast(true);
           setTimeout(() => setShowSessionCompleteToast(false), 3000);
-
-          const fullQuestion = [...followUpBuffer, question].join("\n");
 
           await axios.post(
             `${API_URL_SQL}/save-chat`,
@@ -289,19 +321,16 @@ export default function Chat() {
             { headers: { Authorization: `Bearer ${idToken}` } }
           );
 
-          setHistory([
-            { question: fullQuestion, response: responseText, timestamp },
-            ...history,
-          ]);
-
-          setFollowUpBuffer([]);
-          setParsedSymptom(null);
+          setHistory([{ question: fullQuestion, response: responseText, timestamp }, ...history]);
         }
 
+        setLoadingResponse(false);
         return;
       }
 
-      // Step 2: Detect intent
+      // --------------------------
+      // 🧠 Child Psychologist (WebSocket)
+      // --------------------------
       const intentRes = await axios.post(
         `${API_URL}/intent`,
         { message: question },
@@ -311,136 +340,100 @@ export default function Chat() {
       const intent = intentRes.data.response?.[0]?.label || "error_classification";
       const newPersona = INTENT_TO_PERSONA[intent] || "Persona Inactive";
       console.log("Extracted intent:", intent);
+
+      // Reset leftover follow-ups if persona changes
+      if (newPersona !== activePersona) {
+        resetFollowUp();
+        setPsychologistFollowup(null);
+      }
+
       setActivePersona(newPersona);
       localStorage.setItem("activePersona", newPersona);
-     
 
-
-      // Step 3: Handle Child Psychologist flow via WebSocket
       if (intent === "Child Psychologist") {
-        resetFollowUp(); // clear pediatric state
-
-        // ✅ Reuse existing socket if open
+        // ✅ Reuse existing WebSocket if open
         if (socket && socket.readyState === WebSocket.OPEN) {
           socket.send(JSON.stringify({ message: question }));
           setLoadingResponse(false);
           return;
         }
 
-        // Otherwise, create and fully configure a new socket
-        const wsUrl = `${API_URL_PSYCHOLOGIST.replace("https", "wss")}/ws/child-psychologist?token=${idToken}`;
+        // Create and configure new WebSocket
+        const wsUrl = `${API_URL_PSYCHOLOGIST.replace(
+          "https",
+          "wss"
+        )}/ws/child-psychologist?token=${idToken}`;
         const newSocket = new WebSocket(wsUrl);
         console.log("🌐 Connecting to:", wsUrl);
 
-        // Assign all handlers BEFORE setSocket
         newSocket.onopen = () => {
           console.log("✅ WebSocket open, sending message:", question);
           newSocket.send(JSON.stringify({ message: question }));
         };
 
         newSocket.onmessage = async (event) => {
-          const data = JSON.parse(event.data);
-          console.log("📩 Received message:", data);
+        const data = JSON.parse(event.data);
+        console.log("📩 Received message:", data);
 
-          if (data.status === "incomplete") {
-            setPsychologistFollowup(data.followup_question || null);
-          }
+        // Update live messages for Current Discussion
+        if (Array.isArray(data.history)) {
+          setPsychologistMessages(data.history);
+        }
 
-          if (data.status === "complete") {
-            setShowSessionCompleteToast(true);
-            setPsychologistFollowup(null);
-            setTimeout(() => setShowSessionCompleteToast(false), 3000);
+        if (data.status === "incomplete") {
+          setPsychologistFollowup(data.followup_question || null);
+        }
 
-            const userQuestion = (data.history || [])
-              .filter((msg) => msg.role === "user")
-              .map((msg) => msg.content)
-              .join("\n");
+        if (data.status === "complete") {
+          setShowSessionCompleteToast(true);
+          setPsychologistFollowup(null);
+          setTimeout(() => setShowSessionCompleteToast(false), 3000);
 
-            await axios.post(`${API_URL_SQL}/save-chat`, {
+          const userQuestion = (data.history || [])
+            .filter((msg) => msg.role === "user")
+            .map((msg) => msg.content)
+            .join("\n");
+
+          await axios.post(
+            `${API_URL_SQL}/save-chat`,
+            {
               question: userQuestion,
               intent: "Child Psychologist",
               parsed_symptom: {},
               response: data.guidance,
               timestamp,
-            }, { headers: { Authorization: `Bearer ${idToken}` } });
-
-            setHistory([{ question: userQuestion, response: data.guidance, timestamp }, ...history]);
-
-            newSocket.close();
-            setSocket(null);
-          }
-        };
-
-        newSocket.onerror = (err) => {
-          console.error("WebSocket error:", err);
-          newSocket.close();
-          setSocket(null);
-        };
-
-        newSocket.onclose = (event) => {
-          console.log("🔌 WebSocket closed", event.code, event.reason);
-        };
-
-        setSocket(newSocket); // ✅ after all handlers are assigned
-        return;
-      }
-
-
-      
-
-      // Step 4: Handle Pediatrician flow
-      if (intent === "Pediatrician") {
-        const res = await axios.post(
-          `${API_URL_PEDITRICIAN}/pediatrician`,
-          { message: question },
-          { headers: { Authorization: `Bearer ${idToken}` } }
-        );
-
-        const responseData = res.data;
-        setParsedSymptom(responseData.parsed_symptom || {});
-        setFollowUpBuffer([question]);
-
-        if (responseData.status === "incomplete") {
-          setFollowUpMode(true);
-          setMissingFields(responseData.missing_fields);
-          setRequiredFields(responseData.required_fields || []);
-          setFollowups(responseData.followup_questions || {});
-          setPrimarySymptomAvailable(responseData.primary_symptom_available);
-          responseText = Object.values(responseData.followup_questions).join("\n");
-        } else {
-          responseText = responseData.guidance;
-          setFollowUpMode(false);
-          setMissingFields([]);
-          setRequiredFields([]);
-          setFollowups({});
-          setPrimarySymptomAvailable(false);
-          setFollowUpBuffer([]);
-          setParsedSymptom(null);
-          setShowSessionCompleteToast(true);
-          setTimeout(() => setShowSessionCompleteToast(false), 3000);
-
-          await axios.post(
-            `${API_URL_SQL}/save-chat`,
-            {
-              question,
-              intent: "Pediatrician",
-              parsed_symptom: responseData.parsed_symptom || {},
-              response: responseText,
-              timestamp,
             },
             { headers: { Authorization: `Bearer ${idToken}` } }
           );
 
-          setHistory([
-            { question, response: responseText, timestamp },
-            ...history,
-          ]);
-        }
+          setHistory([{ question: userQuestion, response: data.guidance, timestamp }, ...history]);
 
-        return;
+          newSocket.close();
+          setSocket(null);
+          // 🔹 Clear psychologist live messages and session data
+          setPsychologistMessages([]);
+          sessionStorage.removeItem("psychologistMessages");
+        }
+      };
+
+      newSocket.onerror = (err) => {
+        console.error("WebSocket error:", err);
+        newSocket.close();
+        setSocket(null);
+      };
+
+      newSocket.onclose = (event) => {
+        console.log("🔌 WebSocket closed", event.code, event.reason);
+      };
+
+      setSocket(newSocket); // ✅ after assigning handlers
+      setLoadingResponse(false);
+      return;
       }
 
-      // Step 5: Handle Out of Scope or Other Personas
+      // --------------------------
+      // ❌ Out of Scope / Fallback
+      // --------------------------
       resetFollowUp();
 
       if (intent === "out_of_scope") {
@@ -448,7 +441,7 @@ export default function Chat() {
           "I'm not trained to handle this kind of question yet. Please ask something related to your child’s health, symptoms, or developmental concerns.";
       } else {
         responseText =
-          "I'm currently only trained to handle pediatric health concerns. Stay tuned — soon I’ll support topics like child psychology, nutrition, sleep coaching, and parenting guidance.";
+          "I'm currently only trained to handle pediatric health or child psychology queries. Stay tuned — soon I’ll support topics like nutrition, sleep coaching, and parenting guidance.";
       }
 
       await axios.post(
@@ -463,16 +456,15 @@ export default function Chat() {
         { headers: { Authorization: `Bearer ${idToken}` } }
       );
 
-      setHistory([
-        { question, response: responseText, timestamp },
-        ...history,
-      ]);
+      setHistory([{ question, response: responseText, timestamp }, ...history]);
     } catch (err) {
       console.error("Error in sendMessage:", err);
     } finally {
       setLoadingResponse(false);
     }
   };
+
+  
 
 
 
@@ -549,6 +541,12 @@ export default function Chat() {
             )}
           </div>
 
+            {showSessionCompleteToast && (
+              <div className="mt-3 px-4 py-2 text-sm rounded bg-green-100 text-green-800 border border-green-300 shadow-sm text-center">
+                Session complete ✔️ You can ask a new question anytime.
+              </div>
+            )}
+
             {parsedSymptom && Object.keys(parsedSymptom).length > 0 ? (
               <div className="mt-4 p-4 border border-blue-200 rounded bg-blue-50 shadow-sm text-sm text-blue-800">
                 <h4 className="font-semibold text-blue-700 mb-2">Symptom Summary So Far:</h4>
@@ -584,7 +582,7 @@ export default function Chat() {
                 </div>
               </div>
             )}
-
+           
             {loadingResponse && (
               <div className="mt-4 p-4 bg-white rounded shadow text-center text-gray-600">
                 <span className="animate-spin inline-block mr-2 border-2 border-blue-500 border-t-transparent rounded-full w-4 h-4"></span>
@@ -592,6 +590,31 @@ export default function Chat() {
               </div>
             )}
 
+            {/* Psychologist Follow-up (above history) */}
+            {psychologistFollowup && (
+              <div className="mt-4 p-4 border border-purple-200 rounded bg-purple-50 shadow-sm text-sm text-purple-800">
+                <h4 className="font-semibold text-purple-700 mb-1">Need a few more details before I can help you</h4>
+                <p>{psychologistFollowup}</p>
+              </div>
+            )}
+
+            {/* 🔹 Current Discussion (live user + AI exchanges from WebSocket) */}
+            {socket && activePersona === "Child Psychologist" && psychologistMessages.length > 0 && (
+              <div className="mt-4 p-4 border border-purple-100 rounded bg-white shadow-sm text-sm text-gray-700">
+                <h4 className="font-semibold text-purple-600 mb-2">Current Discussion</h4>
+                {psychologistMessages.map((msg, idx) => (
+                  <div key={idx} className="mb-2">
+                    {msg.role === "user" ? (
+                      <p><strong>Q:</strong> {msg.content}</p>
+                    ) : (
+                      <p><strong>A:</strong> {msg.content}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* History now comes after follow-up & current discussion */}
             {loadingHistory ? (
               <div className="text-center text-gray-500 mt-6">Loading history...</div>
             ) : (
@@ -609,37 +632,6 @@ export default function Chat() {
               )
             )}
 
-            {psychologistFollowup && (
-              <div className="mt-4 p-4 border border-purple-200 rounded bg-purple-50 shadow-sm text-sm text-purple-800">
-                <h4 className="font-semibold text-purple-700 mb-1">Need a few more details before I can help you</h4>
-                <p>{psychologistFollowup}</p>
-              </div>
-            )}
-
-            {/* 🔹 Current Discussion (live user + AI exchanges from WebSocket) */}
-            {socket && activePersona === "Child Psychologist" && (
-              <div className="mt-4 p-4 border border-purple-100 rounded bg-white shadow-sm text-sm text-gray-700">
-                <h4 className="font-semibold text-purple-600 mb-2">Current Discussion</h4>
-                {(history || [])
-                  .filter((h) => h.intent === "Child Psychologist" && Array.isArray(h.live_history))
-                  .flatMap((h) => h.live_history)  // Combine all message dictionaries
-                  .map((msg, idx) => (
-                    <div key={idx} className="mb-2">
-                      {msg.role === "user" ? (
-                        <p><strong>Q:</strong> {msg.content}</p>
-                      ) : (
-                        <p><strong>A:</strong> {msg.content}</p>
-                      )}
-                    </div>
-                  ))}
-              </div>
-            )}
-
-            {showSessionCompleteToast && (
-              <div className="mt-3 px-4 py-2 text-sm rounded bg-green-100 text-green-800 border border-green-300 shadow-sm text-center">
-                Session complete ✔️ You can ask a new question anytime.
-              </div>
-            )}
           </div>
       </div>
   );
