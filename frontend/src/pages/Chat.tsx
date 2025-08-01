@@ -109,7 +109,7 @@ export default function Chat() {
   // ✅ Close socket on page unload
   useEffect(() => {
     const handleBeforeUnload = () => {
-      if (socketRef) socketRef.close();
+      socketRef.current?.close();
     };
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
@@ -278,6 +278,8 @@ export default function Chat() {
 
       const intent = intentRes.data.response?.[0]?.label || "error_classification";
       const newPersona = INTENT_TO_PERSONA[intent] || "Persona Inactive";
+      // ✅ Always update active persona for UI
+      setActivePersona(newPersona);
 
       // ✅ Child Psychologist Flow
       if (intent === "Child Psychologist") {
