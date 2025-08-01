@@ -219,6 +219,17 @@ export default function Chat() {
         ]);
       };
 
+      // 0️⃣ Psychologist Follow-up Mode
+      if (activePersona === "Child Psychologist" && socketRef.current?.readyState === WebSocket.OPEN) {
+          socketRef.current.send(JSON.stringify({ message: question }));
+          setLoadingResponse(false);
+          return;
+      } else if (activePersona === "Child Psychologist") {
+          // Socket closed, restart flow
+          setActivePersona("Persona Inactive");
+          resetFollowUp();
+      }
+
       // ✅ Pediatrician Flow (multi-turn or single)
       if (followUpMode || activePersona === "Pediatrician") {
         const isFollowUp = followUpMode;
@@ -278,18 +289,16 @@ export default function Chat() {
 
       const intent = intentRes.data.response?.[0]?.label || "error_classification";
       const newPersona = INTENT_TO_PERSONA[intent] || "Persona Inactive";
-      // ✅ Always update active persona for UI
+
+      // ✅ Reset follow-up if persona actually changed
+      if (newPersona !== activePersona) {
+        resetFollowUp(false);  // keep psychologist messages intact
+      }
+
       setActivePersona(newPersona);
 
       // ✅ Child Psychologist Flow
       if (intent === "Child Psychologist") {
-        // Reuse socket if it's still open
-        if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-          socketRef.current.send(JSON.stringify({ message: question }));
-          setLoadingResponse(false);
-          return;
-        }
-
         // Create a new socket if none exists or was closed
         const wsUrl = `${API_URL_PSYCHOLOGIST.replace(
           "https",
@@ -452,48 +461,54 @@ export default function Chat() {
               </div>
             )}
 
-            {parsedSymptom && Object.keys(parsedSymptom).length > 0 ? (
-              <div className="mt-4 p-4 border border-blue-200 rounded bg-blue-50 shadow-sm text-sm text-blue-800">
-                <h4 className="font-semibold text-blue-700 mb-2">Symptom Summary So Far:</h4>
-                <ul className="list-disc pl-4">
-                  {Object.entries(parsedSymptom).map(([key, value]) => (
-                    <li key={key}>
-                      <strong>{key.replaceAll("_", " ")}:</strong>{" "}
-                      {Array.isArray(value) ? value.join(", ") : value || <span className="text-gray-400">N/A</span>}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : followUpMode ? (
-              <div className="mt-4 p-4 border border-yellow-200 rounded bg-yellow-50 shadow-sm text-sm text-yellow-800">
-                <h4 className="font-semibold text-yellow-700 mb-1">Let's start with your main health concern.</h4>
-                <p>Please tell me what primary symptom or issue your child is experiencing.</p>
-              </div>
-            ) : null}
+            
+            {/* 🔹 Unified Follow-Up Section for Peditrician*/}
+            {followUpMode && (
+              <div className="mt-4 space-y-3">
+                {/* 1️⃣ Prompt for primary symptom if not available */}
+                {!primarySymptomAvailable && (
+                  <div className="p-4 border border-yellow-200 rounded bg-yellow-50 shadow-sm text-sm text-yellow-800">
+                    <h4 className="font-semibold text-yellow-700 mb-1">
+                      Let's start with your main health concern.
+                    </h4>
+                    <p>Please tell me what primary symptom or issue your child is experiencing.</p>
+                  </div>
+                )}
 
+                {/* 2️⃣ Symptom summary if we already have data */}
+                {parsedSymptom && Object.keys(parsedSymptom).length > 0 && (
+                  <div className="p-4 border border-blue-200 rounded bg-blue-50 shadow-sm text-sm text-blue-800">
+                    <h4 className="font-semibold text-blue-700 mb-2">Symptom Summary So Far:</h4>
+                    <ul className="list-disc pl-4">
+                      {Object.entries(parsedSymptom).map(([key, value]) => (
+                        <li key={key}>
+                          <strong>{key.replaceAll("_", " ")}:</strong>{" "}
+                          {Array.isArray(value)
+                            ? value.join(", ")
+                            : value || <span className="text-gray-400">N/A</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
-            {followUpMode && missingFields.length > 0 && (
-              <div className="mt-3">
-                <div className="p-3 border border-yellow-300 rounded bg-yellow-50 text-yellow-800 text-sm">
-                  <h4 className="font-semibold text-yellow-700 mb-2">Still need a few details:</h4>
-                  <ul className="list-disc pl-4">
-                    {missingFields.map((field) => (
-                      <li key={field}>{followups[field] || field}</li>
-                    ))}
-                  </ul>
-                </div>
-                <div className="text-xs text-blue-500 mt-1 ml-1">
-                  Collected {requiredFields.length - missingFields.length}/{requiredFields.length} required fields
-                </div>
+                {/* 3️⃣ Missing required fields / follow-up questions */}
+                {missingFields.length > 0 && (
+                  <div className="p-4 border border-yellow-300 rounded bg-yellow-50 shadow-sm text-sm text-yellow-800">
+                    <h4 className="font-semibold text-yellow-700 mb-2">Still need a few details:</h4>
+                    <ul className="list-disc pl-4">
+                      {missingFields.map((field) => (
+                        <li key={field}>{followups[field] || field}</li>
+                      ))}
+                    </ul>
+                    <div className="text-xs text-blue-500 mt-1">
+                      Collected {requiredFields.length - missingFields.length}/{requiredFields.length} required fields
+                    </div>
+                  </div>
+                )}
               </div>
             )}
-           
-            {loadingResponse && (
-              <div className="mt-4 p-4 bg-white rounded shadow text-center text-gray-600">
-                <span className="animate-spin inline-block mr-2 border-2 border-blue-500 border-t-transparent rounded-full w-4 h-4"></span>
-                Loading response...
-              </div>
-            )}
+
 
             {/* Psychologist Follow-up (above history) */}
             {psychologistFollowup && (
@@ -516,6 +531,13 @@ export default function Chat() {
                     )}
                   </div>
                 ))}
+              </div>
+            )}
+
+            {loadingResponse && (
+              <div className="mt-4 p-4 bg-white rounded shadow text-center text-gray-600">
+                <span className="animate-spin inline-block mr-2 border-2 border-blue-500 border-t-transparent rounded-full w-4 h-4"></span>
+                Loading response...
               </div>
             )}
 
