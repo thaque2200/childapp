@@ -338,9 +338,12 @@ export default function Chat() {
 
             await saveChat(userQuestion, "Child Psychologist", data.guidance);
 
-            // ✅ Clear session but keep socket alive for new conversation
+            // ✅ Close psychologist session
             resetFollowUp();
             setPsychologistMessages([]);
+            setActivePersona("Persona Inactive");       // ✅ reset persona
+            socketRef.current?.close();                 // ✅ close socket
+            socketRef.current = null;
           }
         };
 
